@@ -2413,6 +2413,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(pkgdir, exist_ok=True)
 
     portdir = os.path.join(root, "var/db/repos/gentoo")
+    os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
     os.environ["SYSROOT"] = root
@@ -2442,7 +2443,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
                 [gentoo]
                 location = /var/db/repos/gentoo
                 sync-type = git
-                sync-uri = https://anongit.gentoo.org/git/repo/gentoo.git
+                sync-uri = git://github.com/gentoo/gentoo.git
                 """
             )
         )
