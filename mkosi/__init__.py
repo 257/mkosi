@@ -2463,6 +2463,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
             os.path.join(portdir, profile),
             os.path.join(root, "etc/portage/make.profile"),
         )
+    run(['ls', '-lh', os.path.join(root, "etc/portage")])
 
     opts = {
         "--root": root,
@@ -2487,7 +2488,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         emerge_config = load_emerge_config(action="info", args=[], opts={})
         run_action(emerge_config)
     else:
-        opts["--verbose"] = True
         opts["--quiet-build"] = True
 
     kpkgs = [
