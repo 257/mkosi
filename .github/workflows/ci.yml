@@ -18,12 +18,6 @@ jobs:
           - gentoo
         format:
           - directory
-          - tar
-          - gpt_ext4
-          - gpt_xfs
-          - gpt_btrfs
-          - gpt_squashfs
-          - plain_squashfs
 
     steps:
     - uses: actions/checkout@v2
