@@ -65,7 +65,7 @@ jobs:
 
     - name: Build ${{ matrix.distro }}/${{ matrix.format }}
       run: |
-        sudo python3 -m mkosi --debug=build-script build
+        sudo python3 -m mkosi build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }}
       if: matrix.format != 'tar'
