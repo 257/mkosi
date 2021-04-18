@@ -15,11 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         distro:
-          - arch
-          - centos_epel
-          - debian
-          - ubuntu
-          - fedora
           - gentoo
         format:
           - directory
@@ -29,12 +24,6 @@ jobs:
           - gpt_btrfs
           - gpt_squashfs
           - plain_squashfs
-        exclude:
-          # CentOS 8 does not support btrfs.
-          - distro: centos
-            format: gpt_btrfs
-          - distro: centos_epel
-            format: gpt_btrfs
 
     steps:
     - uses: actions/checkout@v2

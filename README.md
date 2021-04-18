@@ -1,8 +1,8 @@
 # mkosi — Build Bespoke OS Images
 
-A fancy wrapper around `dnf --installroot`, `debootstrap`, `pacstrap`
-and `zypper` that generates customized disk images with a number of
-bells and whistles.
+A fancy wrapper around `dnf --installroot`, `debootstrap`, `pacstrap`,
+`emerge --sysroot=$root --root=$root --config-root=$root`, and `zypper` that
+generates customized disk images with a number of bells and whistles.
 
 For a longer description and available features and options, see the
 [man page](mkosi.md).

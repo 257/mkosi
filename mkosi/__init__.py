@@ -2475,14 +2475,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     else:
         opts["--quiet-build"] = True
 
-    kpkgs = ["sys-kernel/gentoo-kernel-bin", "sys-kernel/installkernel-systemd-boot", "sys-kernel/dracut"]
+    kpkgs = ["app-admin/eselect", "sys-kernel/gentoo-kernel-bin", "sys-kernel/installkernel-systemd-boot", "sys-kernel/dracut"]
     emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
     run_action(emerge_config)
-
-    # FIXME: remove once upstream ships $KERNEL_DIR/arch/$ARCH/boot/install.sh
-    # only tested on x86
-    if not do_run_build_script and args.bootable:
-        fix_gentoo_kernel_bin_make_install(root)
 
     syspkgs = ["@system", "sys-apps/systemd"]
     if args.output_format == OutputFormat.gpt_btrfs:
@@ -2491,6 +2486,12 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         syspkgs.append("net-misc/openssh")
     emerge_config = load_emerge_config(args=syspkgs, opts=opts)
     run_action(emerge_config)
+
+    # FIXME: remove once upstream ships $KERNEL_DIR/arch/$ARCH/boot/install.sh
+    # only tested on x86
+    if not do_run_build_script and args.bootable:
+        fix_gentoo_kernel_bin_make_install(root)
+        run_action(emerge_config)
 
     # now build atoms user asked for
     if args.packages:
