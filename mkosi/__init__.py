@@ -2415,8 +2415,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     reposdir = "var/db/repos"
     abs_reposdir = os.path.join("/", reposdir)
     relative_reposdir = os.path.join("../..", reposdir)
-    os.makedirs(abs_reposdir, exist_ok=True)
     portdir = os.path.join(abs_reposdir, "gentoo")
+    os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
     os.environ["SYSROOT"] = root
