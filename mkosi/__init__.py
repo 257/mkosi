@@ -2423,7 +2423,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.environ["KERNEL_DIR"] = os.path.join(root, "usr/src/linux")
     # -user* are required for access to root + "/etc/portage/*"
     # -pid-sandbox is required for cross compile scenarios
-    os.environ["FEATURES"] = "-userfetch -userpriv -pid-sandbox parallel-install"
+    os.environ["FEATURES"] = "-userfetch -userpriv -usersync -usersandbox -pid-sandbox parallel-install"
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
@@ -2432,6 +2432,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="sync", args=[], opts={})
     run_action(emerge_config)
 
+    os.makedirs(os.path.join(root, "var/db/repos"), 0o755)
     os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755)
 
     GENTOO_ARCHITECTURES = {
