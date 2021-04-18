@@ -2419,7 +2419,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
-    os.environ["USER_CONFIG_PATH"] = root + "etc/portage"
+    os.environ["USER_CONFIG_PATH"] = os.path.join(root, "etc/portage")
     os.environ["SYSROOT"] = root
     os.environ["ROOT"] = root
     # os.environ["EPREFIX"] = "/"
