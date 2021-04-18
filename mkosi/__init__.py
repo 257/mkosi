@@ -2412,8 +2412,11 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     pkgdir = os.path.join("/var/cache", "binpkgs-" + binpkgdir_suffix)
     os.makedirs(pkgdir, exist_ok=True)
 
-    portdir = os.path.join(root, "var/db/repos/gentoo")
-    os.makedirs(portdir, exist_ok=True)
+    reposdir = "var/db/repos"
+    abs_reposdir = os.path.join("/", reposdir)
+    relative_reposdir = os.path.join("../..", reposdir)
+    os.makedirs(abs_reposdir, exist_ok=True)
+    portdir = os.path.join(abs_reposdir, "gentoo")
 
     os.environ["PORTAGE_CONFIGROOT"] = root
     os.environ["SYSROOT"] = root
@@ -2429,24 +2432,12 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
     os.environ["USE"] = "systemd"
+    os.environ["EGIT_CLONE_TYPE"] ="shallow"
 
     emerge_config = load_emerge_config(action="sync", args=[], opts={})
     run_action(emerge_config)
 
     os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755, exist_ok=True)
-    os.makedirs(os.path.join(root, "etc/portage/repos.conf"), 0o755, exist_ok=True)
-
-    with open(os.path.join(root, "etc/portage/repos.conf/eselect-repo.conf"), "w") as f:
-        f.write(
-            dedent(
-                """\
-                [gentoo]
-                location = /var/db/repos/gentoo
-                sync-type = git
-                sync-uri = git://github.com/gentoo/gentoo.git
-                """
-            )
-        )
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
@@ -2456,14 +2447,10 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
 
     profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
-
+    make_profile = os.path.join(root, "etc/portage/make.profile")
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
     if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(
-            os.path.join(portdir, profile),
-            os.path.join(root, "etc/portage/make.profile"),
-        )
-    run(['ls', '-lh', os.path.join(root, "etc/portage")])
+        os.symlink(os.path.join(portdir, profile), make_profile)
 
     opts = {
         "--root": root,
