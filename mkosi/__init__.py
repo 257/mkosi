@@ -2419,6 +2419,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
+    os.environ["USER_CONFIG_PATH"] = root + "etc/portage"
     os.environ["SYSROOT"] = root
     os.environ["ROOT"] = root
     # os.environ["EPREFIX"] = "/"
@@ -2471,10 +2472,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
 
     profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
-    MkosiPrinter.info(f"profile path: {os.path.join(portdir, profile)}")
     make_profile = os.path.join(root, "etc/portage/make.profile")
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
-    emerge_config = load_emerge_config(args=[], opts=opts)
     if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
 	    os.symlink(os.path.join(portdir, profile), make_profile)
 
@@ -2487,8 +2486,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     if "build-script" in args.debug:
         opts["--verbose"] = True
-        emerge_config = load_emerge_config(action="info", args=[], opts={})
-        emerge_config = load_emerge_config(action="version", args=[], opts={})
+        emerge_config.action = "info"
+        run_action(emerge_config)
+        emerge_config.action = "version"
         run_action(emerge_config)
     else:
         opts["--quiet-build"] = True
@@ -2500,7 +2500,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "sys-kernel/dracut",
     ]
     emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
-    emerge_config.target_config.settings.profile_path = os.path.join(portdir, profile)
     run_action(emerge_config)
 
     syspkgs = ["@system", "sys-apps/systemd"]
