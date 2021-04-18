@@ -2447,9 +2447,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
             )
         )
 
-    emerge_config = load_emerge_config(action="sync", args=[], opts={})
-    run_action(emerge_config)
-
     os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755, exist_ok=True)
 
     GENTOO_ARCHITECTURES = {
@@ -2479,6 +2476,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "--noreplace": True,
         "--nodeps": True,
     }
+
+    emerge_config = load_emerge_config(action="sync", args=[], opts=opts)
+    run_action(emerge_config)
 
     # FIXME: is this the right way to check if we're runnin on CI?
     # if not args.with_tests:
