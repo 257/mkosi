@@ -2461,8 +2461,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     make_profile = os.path.join(root, "etc/portage/make.profile")
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
     if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(os.path.join(portdir, profile), make_profile)
-    run(['ls', '-dhl', make_profile])
+        os.environ["PROFILE_PATH"] = os.path.join(portdir, profile)
 
     opts = {
         "--root": root,
