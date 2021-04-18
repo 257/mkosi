@@ -91,7 +91,7 @@ jobs:
         QemuHeadless=yes
         EOF
 
-        sudo python3 -m mkosi --force build
+        sudo python3 -m mkosi --force --debug=build-script build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }} UEFI UKI
       if: matrix.format != 'directory' &&
@@ -122,7 +122,7 @@ jobs:
         QemuHeadless=yes
         EOF
 
-        sudo python3 -m mkosi --force build
+        sudo python3 -m mkosi --force --debug=build-script build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }} UEFI
       if: matrix.format != 'directory' &&
