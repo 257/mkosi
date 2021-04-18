@@ -2412,7 +2412,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     pkgdir = os.path.join("/var/cache", "binpkgs-" + binpkgdir_suffix)
     os.makedirs(pkgdir, exist_ok=True)
 
-    portdir = os.path.join(root, "/var/db/repos/gentoo")
+    portdir = os.path.join(root, "var/db/repos/gentoo")
 
     os.environ["PORTAGE_CONFIGROOT"] = root
     os.environ["SYSROOT"] = root
