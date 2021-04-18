@@ -2475,7 +2475,12 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     else:
         opts["--quiet-build"] = True
 
-    kpkgs = ["app-admin/eselect", "sys-kernel/gentoo-kernel-bin", "sys-kernel/installkernel-systemd-boot", "sys-kernel/dracut"]
+    kpkgs = [
+        "app-admin/eselect",
+        "sys-kernel/gentoo-kernel-bin",
+        "sys-kernel/installkernel-systemd-boot",
+        "sys-kernel/dracut",
+    ]
     emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
     run_action(emerge_config)
 
