@@ -2477,7 +2477,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "--nodeps": True,
     }
 
-    emerge_config = load_emerge_config(action="sync", args=[], opts={})
+    emerge_config = load_emerge_config(action="sync", args=[], opts=opts)
     run_action(emerge_config)
 
     # FIXME: is this the right way to check if we're runnin on CI?
