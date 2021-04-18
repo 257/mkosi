@@ -48,20 +48,11 @@ runs:
     shell: bash
     run: |
       sudo python3 -m pip install portage
-      sudo tee /etc/systemd/network/80-vm-vt.network > /dev/null <<- EOF
-      [Match]
-      Name=vt-*
-      Driver=tun
-
-      [Network]
-      # Default to using a /28 prefix, giving up to 13 addresses per VM.
-      Address=0.0.0.0/28
-      LinkLocalAddressing=yes
-      DHCPServer=yes
-      IPMasquerade=yes
-      LLDP=yes
-      EmitLLDP=customer-bridge
-      IPv6PrefixDelegation=yes
+      sudo tee /usr/lib/sysusers.d/acct-group-portage.conf > /dev/null <<- EOF
+      g	portage	250
+      EOF
+      sudo tee /usr/lib/sysusers.d/acct-user-portage.conf > /dev/null <<- EOF
+      u	portage	250:portage	System\ user\;\ portage	/var/lib/portage/home	-
       EOF
 
       sudo systemctl restart systemd-networkd
