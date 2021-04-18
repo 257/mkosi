@@ -2432,7 +2432,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="sync", args=[], opts={})
     run_action(emerge_config)
 
-    os.mkdir(os.path.join(root, "etc/portage/savedconfig"), 0o755)
+    os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755)
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
