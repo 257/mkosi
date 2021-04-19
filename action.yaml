@@ -69,8 +69,7 @@ runs:
       # sudo python3 -m pip show --files portage
 
       # this is from zmedico; maintainer of portage on pypi
-      # sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
-      sudo python -m venv /tmp/portage-venv && . /tmp/portage-venv/bin/activate && pip install portage
+      sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
 
       # git clone --depth=1 git://github.com/gentoo/portage.git
       # cd portage
