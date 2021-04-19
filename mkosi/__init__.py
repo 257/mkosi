@@ -2413,9 +2413,11 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         die("You need portage module for Gentoo: https://gitweb.gentoo.org/proj/portage.git")
 
     if "build-script" in args.debug:
-        MkosiPrinter.info(f"portage.const.GLOBAL_CONFIG_PATH {portage.const.GLOBAL_CONFIG_PATH}")
-        MkosiPrinter.info(f"portage.const.PROFILE_PATH {portage.const.PROFILE_PATH}")
-        MkosiPrinter.info(f"portage.const.USER_CONFIG_PATH {portage.const.USER_CONFIG_PATH}")
+        MkosiPrinter.info(
+            f"GLOBAL_CONFIG_PATH {GLOBAL_CONFIG_PATH}\n"
+            f"PROFILE_PATH {PROFILE_PATH}\n"
+            f"USER_CONFIG_PATH {USER_CONFIG_PATH}"
+        )
 
     jobs = multiprocessing.cpu_count()
 
@@ -2444,8 +2446,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
-    os.environ["USE"] = "build"
-    # -filecaps -redistributable -savedconfig"
+    os.environ["USE"] = "build symlink -filecaps -redistributable -savedconfig"
     os.environ["EGIT_CLONE_TYPE"] = "shallow"
 
     opts = {
@@ -2498,6 +2499,21 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         opts["--quiet-build"] = True
 
     kpkgs = [
+        "sys-kernel/gentoo-sources",
+    ]
+    emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
+    run_action(emerge_config)
+    run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
+
+    syspkgs = ["@system"]
+    if args.output_format == OutputFormat.gpt_btrfs:
+        syspkgs.append("sys-fs/btrfs-progs")
+    if args.ssh:
+        syspkgs.append("net-misc/openssh")
+    emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
+    run_action(emerge_config)
+
+    kpkgs = [
         "sys-kernel/linux-firmware",
     ]
     package_accept_keywords = os.path.join(root, "etc/portage/package.accept_keywords")
@@ -2534,13 +2550,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         ],
         opts=opts,
     )
-    syspkgs = ["@system", "sys-apps/systemd"]
-    if args.output_format == OutputFormat.gpt_btrfs:
-        syspkgs.append("sys-fs/btrfs-progs")
-    if args.ssh:
-        syspkgs.append("net-misc/openssh")
-    emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
-    run_action(emerge_config)
 
     # now build atoms user asked for
     if args.packages:
