@@ -69,16 +69,16 @@ runs:
       # sudo python3 -m pip show --files portage
 
       # this is from zmedico; maintainer of portage on pypi
-      sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
+      # sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
 
-      # git clone --depth=1 git://github.com/gentoo/portage.git
-      # cd portage
-      # sudo tee setup.cfg > /dev/null <<- EOF
-      # [build_ext]
-      # portage-ext-modules=true
-      # EOF
-      # python setup.py build_ext --inplace --portage-ext-modules
-      # sudo python setup.py install
+      git clone --depth=1 git://github.com/gentoo/portage.git
+      cd portage
+      sudo tee setup.cfg > /dev/null <<- EOF
+      [build_ext]
+      portage-ext-modules=true
+      EOF
+      python setup.py build_ext --inplace --portage-ext-modules
+      sudo python setup.py install
 
       # should not be needed since we're passing --root=$somewhere!
       sudo ln -s ../../var/db/repos/gentoo/profiles/default/linux/amd64/17.1 /etc/portage/make.profile
