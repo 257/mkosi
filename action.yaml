@@ -74,6 +74,8 @@ runs:
       EOF
       python setup.py build_ext --inplace --portage-ext-module
       sudo python setup.py install
+      cd /etc/portage
+      ln -s ../../var/db/repos/gentoo/profiles/default/linux/amd64/17.1 make.profile
       # sudo find /usr/share -iname 'portage*'
 
     env:
