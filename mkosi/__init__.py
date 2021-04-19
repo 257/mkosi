@@ -2437,8 +2437,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.environ["USE"] = "systemd"
     os.environ["EGIT_CLONE_TYPE"] ="shallow"
 
-    os.mkdir(os.path.join(root, "etc/portage/savedconfig"), 0o755)
-
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
         "aarch64": "arm64",
@@ -2482,7 +2480,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
             )
         )
     # run(['cat', '/usr/share/portage/config/sets/portage.conf'])
-    # os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755, exist_ok=True)
+    os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755, exist_ok=True)
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
