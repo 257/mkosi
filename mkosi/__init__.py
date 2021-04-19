@@ -2472,18 +2472,18 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
                 """
             )
         )
-    # run_action(load_emerge_config(action="sync", args=[], opts=opts))
+    run_action(load_emerge_config(action="sync", args=[], opts=opts))
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
         "aarch64": "arm64",
     }
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
-    profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
+    arch_profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
     profile_path = os.path.join(root, portage.const.PROFILE_PATH)
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
-    if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(os.path.join(portdir, profile), profile_path)
+    if not os.path.islink(profile_path):
+        os.symlink(os.path.join(portdir, arch_profile), profile_path)
 
     # FIXME: is this the right way to check if we're runnin on CI?
     # if not args.with_tests:
