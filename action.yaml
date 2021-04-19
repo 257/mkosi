@@ -64,12 +64,17 @@ runs:
       sync-uri = git://github.com/gentoo/gentoo.git
       EOF
 
-      sudo python3 -m pip install --user --verbose git+git://github.com/gentoo/portage.git
+      # sudo python3 -m pip install --user --verbose git+git://github.com/gentoo/portage.git
       # sudo python3 -m pip show --files portage
-      # sudo find / -type f -iname 'portage.conf'
-      # git clone git://github.com/gentoo/portage.git
-      # sudo install -d /usr/share/portage
-      # sudo cp -va portage/cnf/* /usr/share/portage/
+      git clone git://github.com/gentoo/portage.git
+      cd portage
+      sudo tee setup.cfg > /dev/null <<- EOF
+      [build_ext]
+      portage-ext-modules=true
+      EOF
+      python setup.py build_ext --inplace --portage-ext-module
+      sudo python setup.py install
+      sudo find /usr/share -iname 'portage*'
 
     env:
       CMAKE_GENERATOR: Ninja
