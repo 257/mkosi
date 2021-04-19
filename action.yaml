@@ -47,7 +47,7 @@ runs:
   - name: Dependencies
     shell: bash
     run: |
-      sudo python3 -m pip install --prefix /usr --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
+      sudo python3 -m pip install portage
       sudo python3 -m pip show --files portage
       git clone git://github.com/gentoo/portage.git
       sudo install -d /usr/share/portage
