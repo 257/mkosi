@@ -2437,22 +2437,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.environ["USE"] = "systemd"
     os.environ["EGIT_CLONE_TYPE"] ="shallow"
 
-    GENTOO_ARCHITECTURES = {
-        "x86_64": "amd64",
-        "aarch64": "arm64",
-    }
-
-    gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
-
-    profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
-
-    # don't overwrite user's chosen profile, users may set it in skeleton_trees
-    if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(
-            os.path.join(portdir, profile),
-            os.path.join(root, "etc/portage/make.profile"),
-        )
-
     opts = {
         "--root": root,
         "--config-root": root,
@@ -2480,17 +2464,20 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
             )
         )
     # run(['cat', '/usr/share/portage/config/sets/portage.conf'])
-    os.makedirs(os.path.join(root, "etc/portage/savedconfig"), 0o755, exist_ok=True)
+    run_action(load_emerge_config(action="sync", args=[], opts=opts))
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
         "aarch64": "arm64",
     }
-
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
-
-    emerge_config = load_emerge_config(action="sync", args=[], opts=opts)
-    run_action(emerge_config)
+    profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
+    # don't overwrite user's chosen profile, users may set it in skeleton_trees
+    if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
+        os.symlink(
+            os.path.join(portdir, profile),
+            os.path.join(root, "etc/portage/make.profile"),
+        )
 
     profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
     make_profile = os.path.join(root, "etc/portage/make.profile")
