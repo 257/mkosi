@@ -64,7 +64,7 @@ runs:
       sync-uri = git://github.com/gentoo/gentoo.git
       EOF
 
-      sudo python3 -m pip install --user --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
+      sudo python3 -m pip install --user git+git://github.com/gentoo/portage.git
       # sudo python3 -m pip show --files portage
       # sudo find / -type f -iname 'portage.conf'
       # git clone git://github.com/gentoo/portage.git
