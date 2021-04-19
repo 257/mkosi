@@ -66,7 +66,7 @@ runs:
 
       # sudo python3 -m pip install --user --verbose git+git://github.com/gentoo/portage.git
       # sudo python3 -m pip show --files portage
-      git clone git://github.com/gentoo/portage.git
+      git clone --depth=1 git://github.com/gentoo/portage.git
       cd portage
       sudo tee setup.cfg > /dev/null <<- EOF
       [build_ext]
@@ -74,7 +74,7 @@ runs:
       EOF
       python setup.py build_ext --inplace --portage-ext-module
       sudo python setup.py install
-      sudo find /usr/share -iname 'portage*'
+      # sudo find /usr/share -iname 'portage*'
 
     env:
       CMAKE_GENERATOR: Ninja

@@ -2489,7 +2489,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
 
-    run_action(load_emerge_config(action="sync", args=[], opts=opts))
+    emerge_config = load_emerge_config(action="sync", args=[], opts=opts)
+    run_action(emerge_config)
 
     profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
     make_profile = os.path.join(root, "etc/portage/make.profile")
