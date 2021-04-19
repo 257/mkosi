@@ -2430,7 +2430,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.environ["KERNEL_DIR"] = os.path.join(root, "usr/src/linux")
     # -user* are required for access to root + "/etc/portage/*"
     # -pid-sandbox is required for cross compile scenarios
-    os.environ["FEATURES"] = "-userfetch -userpriv -usersync -usersandbox -sandbox -pid-sandbox -network-sandbox parallel-install"
+    os.environ[
+        "FEATURES"
+    ] = "-userfetch -userpriv -usersync -usersandbox -sandbox -pid-sandbox -network-sandbox parallel-install"
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
@@ -2482,7 +2484,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     make_profile = os.path.join(root, "etc/portage/make.profile")
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
     if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-	    os.symlink(os.path.join(portdir, profile), make_profile)
+        os.symlink(os.path.join(portdir, profile), make_profile)
 
     # FIXME: is this the right way to check if we're runnin on CI?
     # if not args.with_tests:
@@ -2496,15 +2498,12 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         opts["--quiet-build"] = True
 
     kpkgs = [
-        "app-admin/eselect",
         "sys-kernel/linux-firmware",
-        "sys-kernel/gentoo-kernel-bin",
         "sys-kernel/installkernel-systemd-boot",
-        "sys-kernel/dracut",
     ]
     package_use_dir = os.path.join(root, "etc/portage/package.use")
     os.makedirs(package_use_dir, exist_ok=True)
-    with open(os.path.join(package_use_dir,  "kpkgs"), "w") as f:
+    with open(os.path.join(package_use_dir, "kpkgs"), "w") as f:
         f.write(
             dedent(
                 """\
@@ -2514,6 +2513,18 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         )
     emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
     run_action(emerge_config)
+    kpkgs = [
+        "sys-kernel/gentoo-kernel-bin",
+        "sys-kernel/dracut",
+    ]
+    emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
+    run_action(emerge_config)
+
+    # FIXME: remove once upstream ships $KERNEL_DIR/arch/$ARCH/boot/install.sh
+    # only tested on x86
+    # if not do_run_build_script and args.bootable:
+        # fix_gentoo_kernel_bin_make_install(root)
+
 
     syspkgs = ["@system", "sys-apps/systemd"]
     if args.output_format == OutputFormat.gpt_btrfs:
@@ -2522,11 +2533,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         syspkgs.append("net-misc/openssh")
     emerge_config.args = syspkgs
     run_action(emerge_config)
-
-    # FIXME: remove once upstream ships $KERNEL_DIR/arch/$ARCH/boot/install.sh
-    # only tested on x86
-    if not do_run_build_script and args.bootable:
-        fix_gentoo_kernel_bin_make_install(root)
 
     # now build atoms user asked for
     if args.packages:
