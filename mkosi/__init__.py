@@ -2402,12 +2402,20 @@ def fix_gentoo_kernel_bin_make_install(root: str) -> None:
 @complete_step("Installing Gentoo")
 def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
     try:
+        import portage
         from _emerge.actions import load_emerge_config, run_action
-
-        if "build-script" in args.debug:
-            from _emerge.actions import action_info
+        from portage.const import (
+            GLOBAL_CONFIG_PATH,
+            PROFILE_PATH,
+            USER_CONFIG_PATH,
+        )
     except ImportError:
         die("You need portage module for Gentoo: https://gitweb.gentoo.org/proj/portage.git")
+
+    if "build-script" in args.debug:
+        MkosiPrinter.info(f"portage.const.GLOBAL_CONFIG_PATH {portage.const.GLOBAL_CONFIG_PATH}")
+        MkosiPrinter.info(f"portage.const.PROFILE_PATH {portage.const.PROFILE_PATH}")
+        MkosiPrinter.info(f"portage.const.USER_CONFIG_PATH {portage.const.USER_CONFIG_PATH}")
 
     jobs = multiprocessing.cpu_count()
 
@@ -2428,7 +2436,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.environ["PORTDIR"] = portdir
     os.environ["PKGDIR"] = pkgdir
     os.environ["KERNEL_DIR"] = os.path.join(root, "usr/src/linux")
-    # -user* are required for access to root + "/etc/portage/*"
+    # -user* are required for access to USER_CONFIG_PATH
     # -pid-sandbox is required for cross compile scenarios
     os.environ[
         "FEATURES"
@@ -2436,7 +2444,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
-    os.environ["USE"] = "systemd -redistributable"
+    os.environ["USE"] = "build -filecaps -redistributable -savedconfig"
     os.environ["EGIT_CLONE_TYPE"] = "shallow"
 
     opts = {
@@ -2450,7 +2458,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "--jobs": jobs,
         "--load-average": jobs - 1,
         "--noreplace": True,
-        "--nodeps": True,
     }
 
     os.makedirs(os.path.join(root, "etc/portage/repos.conf"), exist_ok=True)
@@ -2465,7 +2472,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
                 """
             )
         )
-    run_action(load_emerge_config(action="sync", args=[], opts=opts))
+    # run_action(load_emerge_config(action="sync", args=[], opts=opts))
 
     GENTOO_ARCHITECTURES = {
         "x86_64": "amd64",
@@ -2473,18 +2480,10 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     }
     gentoo_arch = GENTOO_ARCHITECTURES.get(args.architecture, "amd64")
     profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
+    profile_path = os.path.join(root, portage.const.PROFILE_PATH)
     # don't overwrite user's chosen profile, users may set it in skeleton_trees
     if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(
-            os.path.join(portdir, profile),
-            os.path.join(root, "etc/portage/make.profile"),
-        )
-
-    profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
-    make_profile = os.path.join(root, "etc/portage/make.profile")
-    # don't overwrite user's chosen profile, users may set it in skeleton_trees
-    if not os.path.islink(os.path.join(root, "etc/portage/make.profile")):
-        os.symlink(os.path.join(portdir, profile), make_profile)
+        os.symlink(os.path.join(portdir, profile), profile_path)
 
     # FIXME: is this the right way to check if we're runnin on CI?
     # if not args.with_tests:
@@ -2499,11 +2498,10 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     kpkgs = [
         "sys-kernel/linux-firmware",
-        "sys-kernel/installkernel-systemd-boot",
     ]
-    package_use_dir = os.path.join(root, "etc/portage/package.use")
-    os.makedirs(package_use_dir, exist_ok=True)
-    with open(os.path.join(package_use_dir, "kpkgs"), "w") as f:
+    package_accept_keywords = os.path.join(root, "etc/portage/package.accept_keywords")
+    os.makedirs(package_accept_keywords, exist_ok=True)
+    with open(os.path.join(package_accept_keywords, "amd64"), "w") as f:
         f.write(
             dedent(
                 """\
@@ -2514,6 +2512,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
     run_action(emerge_config)
     kpkgs = [
+        "sys-apps/baselayout",
+        "app-admin/eselect",
+        "sys-apps/portage",
         "sys-kernel/gentoo-kernel-bin",
         "sys-kernel/dracut",
     ]
@@ -2524,14 +2525,20 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # only tested on x86
     # if not do_run_build_script and args.bootable:
         # fix_gentoo_kernel_bin_make_install(root)
-
-
+    # if not do_run_build_script and args.bootable:
+    emerge_config = load_emerge_config(
+        action="config",
+        args=[
+            "sys-kernel/gentoo-kernel-bin",
+        ],
+        opts=opts,
+    )
     syspkgs = ["@system", "sys-apps/systemd"]
     if args.output_format == OutputFormat.gpt_btrfs:
         syspkgs.append("sys-fs/btrfs-progs")
     if args.ssh:
         syspkgs.append("net-misc/openssh")
-    emerge_config.args = syspkgs
+    emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
     run_action(emerge_config)
 
     # now build atoms user asked for
