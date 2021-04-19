@@ -47,8 +47,8 @@ runs:
   - name: Dependencies
     shell: bash
     run: |
-      sudo python3 -m pip install --install-option="--system-prefix=/usr/local" --verbose git+git://github.com/gentoo/portage.git
-      sudo ls -hl /usr/share/portage/config
+      sudo python3 -m pip install --install-option="--system-prefix=/usr" --verbose git+git://github.com/gentoo/portage.git
+      sudo python3 -m pip show portage
       sudo tee /usr/lib/sysusers.d/acct-group-portage.conf > /dev/null <<- EOF
       g	portage	250
       EOF
