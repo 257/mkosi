@@ -70,8 +70,8 @@ runs:
 
       # this is from zmedico; maintainer of portage on pypi
       # sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
-      portage-venv=$(mktemp)
-      sudo python -m venv $(portage-venv) && . $(portage-venv)/bin/activate && pip install portage
+      mktemp > /tmp/portage-venv
+      sudo python -m venv $(cat /tmp/portage-venv) && . $(cat /tmp/portage-venv)/bin/activate && pip install portage
 
       # git clone --depth=1 git://github.com/gentoo/portage.git
       # cd portage
