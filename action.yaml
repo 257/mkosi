@@ -47,19 +47,14 @@ runs:
   - name: Dependencies
     shell: bash
     run: |
-      sudo python3 -m pip install --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
-      sudo python3 -m pip show --files portage
-      git clone git://github.com/gentoo/portage.git
-      sudo install -d /usr/share/portage
-      sudo cp -va portage/cnf/* /usr/share/portage/
       sudo tee /usr/lib/sysusers.d/acct-group-portage.conf > /dev/null <<- EOF
       g	portage	250
       EOF
       sudo tee /usr/lib/sysusers.d/acct-user-portage.conf > /dev/null <<- EOF
       u	portage	250:portage	System\ user\;\ portage	/var/lib/portage/home	-
       EOF
-
       sudo systemd-sysusers --no-pager
+
       sudo install --owner=portage --group=portage --mode=0755 --directory /var/db/repos
       sudo install --owner=portage --group=portage --mode=0755 --directory /etc/portage/repos.conf
       sudo tee /etc/portage/repos.conf/eselect-repo.conf > /dev/null <<- EOF
@@ -69,7 +64,11 @@ runs:
       sync-uri = git://github.com/gentoo/gentoo.git
       EOF
 
-      sudo systemctl restart systemd-networkd
+      sudo python3 -m pip install --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
+      sudo python3 -m pip show --files portage
+      git clone git://github.com/gentoo/portage.git
+      sudo install -d /usr/share/portage
+      sudo cp -va portage/cnf/* /usr/share/portage/
 
     env:
       CMAKE_GENERATOR: Ninja

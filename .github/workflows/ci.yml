@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - test-gentoo
   pull_request:
     branches:
       - main
@@ -15,26 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         distro:
-          - arch
-          - centos_epel
-          - debian
-          - ubuntu
-          - fedora
           - gentoo
         format:
           - directory
-          - tar
-          - gpt_ext4
-          - gpt_xfs
-          - gpt_btrfs
-          - gpt_squashfs
-          - plain_squashfs
-        exclude:
-          # CentOS 8 does not support btrfs.
-          - distro: centos
-            format: gpt_btrfs
-          - distro: centos_epel
-            format: gpt_btrfs
 
     steps:
     - uses: actions/checkout@v2
@@ -82,7 +65,7 @@ jobs:
 
     - name: Build ${{ matrix.distro }}/${{ matrix.format }}
       run: |
-        sudo python3 -m mkosi build
+        sudo python3 -m mkosi --debug=build-script build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }}
       if: matrix.format != 'tar'
@@ -102,7 +85,7 @@ jobs:
         QemuHeadless=yes
         EOF
 
-        sudo python3 -m mkosi --force build
+        sudo python3 -m mkosi --force --debug=build-script build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }} UEFI UKI
       if: matrix.format != 'directory' &&
@@ -133,7 +116,7 @@ jobs:
         QemuHeadless=yes
         EOF
 
-        sudo python3 -m mkosi --force build
+        sudo python3 -m mkosi --force --debug=build-script build
 
     - name: Boot ${{ matrix.distro }}/${{ matrix.format }} UEFI
       if: matrix.format != 'directory' &&
