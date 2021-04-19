@@ -8,41 +8,41 @@ runs:
     shell: bash
     run: sudo apt-get update
 
-  - name: apt-get install
-    shell: bash
-    run: sudo apt-get --assume-yes --no-install-recommends install
-          asciidoc
-          autopoint
-          check
-          debootstrap
-          docbook-xsl
-          e2fsprogs
-          gettext
-          libarchive-dev
-          libcap-dev
-          libcppunit-dev
-          libcurl4-openssl-dev
-          libdb-dev
-          libgcrypt-dev
-          libgpgme-dev
-          libjson-c-dev
-          liblua5.2-dev
-          libmagic-dev
-          libpopt-dev
-          libsmartcols-dev
-          libyaml-dev
-          libzstd-dev
-          meson
-          ninja-build
-          ovmf
-          python3-gpg
-          python3-sphinx
-          qemu-system-x86-64
-          squashfs-tools
-          swig
-          systemd-container
-          xfsprogs
-          xsltproc
+  # - name: apt-get install
+  #   shell: bash
+  #   run: sudo apt-get --assume-yes --no-install-recommends install
+  #         asciidoc
+  #         autopoint
+  #         check
+  #         debootstrap
+  #         docbook-xsl
+  #         e2fsprogs
+  #         gettext
+  #         libarchive-dev
+  #         libcap-dev
+  #         libcppunit-dev
+  #         libcurl4-openssl-dev
+  #         libdb-dev
+  #         libgcrypt-dev
+  #         libgpgme-dev
+  #         libjson-c-dev
+  #         liblua5.2-dev
+  #         libmagic-dev
+  #         libpopt-dev
+  #         libsmartcols-dev
+  #         libyaml-dev
+  #         libzstd-dev
+  #         meson
+  #         ninja-build
+  #         ovmf
+  #         python3-gpg
+  #         python3-sphinx
+  #         qemu-system-x86-64
+  #         squashfs-tools
+  #         swig
+  #         systemd-container
+  #         xfsprogs
+  #         xsltproc
 
   - name: Dependencies
     shell: bash
@@ -64,12 +64,12 @@ runs:
       sync-uri = git://github.com/gentoo/gentoo.git
       EOF
 
-      sudo python3 -m pip install --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
-      sudo python3 -m pip show --files portage
-      sudo find / -type f -iname 'portage.conf'
-      git clone git://github.com/gentoo/portage.git
-      sudo install -d /usr/share/portage
-      sudo cp -va portage/cnf/* /usr/share/portage/
+      sudo python3 -m pip install --user --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
+      # sudo python3 -m pip show --files portage
+      # sudo find / -type f -iname 'portage.conf'
+      # git clone git://github.com/gentoo/portage.git
+      # sudo install -d /usr/share/portage
+      # sudo cp -va portage/cnf/* /usr/share/portage/
 
     env:
       CMAKE_GENERATOR: Ninja
