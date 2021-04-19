@@ -2502,7 +2502,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "sys-kernel/installkernel-systemd-boot",
         "sys-kernel/dracut",
     ]
-    package_use_dir = os.path.join(root, "etc/portage/package.use"
+    package_use_dir = os.path.join(root, "etc/portage/package.use")
     os.makedirs(package_use_dir, exist_ok=True)
     with open(os.path.join(package_use_dir,  "kpkgs"), "w") as f:
         f.write(
