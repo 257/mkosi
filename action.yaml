@@ -64,19 +64,26 @@ runs:
       sync-uri = git://github.com/gentoo/gentoo.git
       EOF
 
+      # does not work!
       # sudo python3 -m pip install --user --verbose git+git://github.com/gentoo/portage.git
       # sudo python3 -m pip show --files portage
-      git clone --depth=1 git://github.com/gentoo/portage.git
-      cd portage
-      sudo tee setup.cfg > /dev/null <<- EOF
-      [build_ext]
-      portage-ext-modules=true
-      EOF
-      python setup.py build_ext --inplace --portage-ext-modules
-      sudo python setup.py install
-      cd /etc/portage
-      sudo ln -s ../../var/db/repos/gentoo/profiles/default/linux/amd64/17.1 make.profile
-      # sudo find /usr/share -iname 'portage*'
+
+      # this is from zmedico; maintainer of portage on pypi
+      # sudo python -m venv ~/portage-venv && . ~/portage-venv/bin/activate && pip install portage
+      portage-venv=$(mktemp)
+      sudo python -m venv $(portage-venv) && . $(portage-venv)/bin/activate && pip install portage
+
+      # git clone --depth=1 git://github.com/gentoo/portage.git
+      # cd portage
+      # sudo tee setup.cfg > /dev/null <<- EOF
+      # [build_ext]
+      # portage-ext-modules=true
+      # EOF
+      # python setup.py build_ext --inplace --portage-ext-modules
+      # sudo python setup.py install
+
+      # should not be needed since we're passing --root=$somewhere!
+      sudo ln -s ../../var/db/repos/gentoo/profiles/default/linux/amd64/17.1 /etc/portage/make.profile
 
     env:
       CMAKE_GENERATOR: Ninja
