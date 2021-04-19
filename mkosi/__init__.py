@@ -2505,17 +2505,22 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     run_action(emerge_config)
     run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
 
-    blockers = ["app-portage/elt-patches", "dev-libs/elfutils"]
+    blockers = [
+        "app-portage/elt-patches",
+        "app-arch/xz-utils",
+    ]
     opts["--nodeps"] = True
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
-    opts["--nodeps"] = False
     syspkgs = ["@system"]
     if args.output_format == OutputFormat.gpt_btrfs:
         syspkgs.append("sys-fs/btrfs-progs")
     if args.ssh:
         syspkgs.append("net-misc/openssh")
+    emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
+    run_action(emerge_config)
+    opts["--nodeps"] = False
     emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
     run_action(emerge_config)
 
