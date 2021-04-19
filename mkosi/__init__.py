@@ -2444,7 +2444,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
-    os.environ["USE"] = "build -filecaps -redistributable -savedconfig"
+    os.environ["USE"] = "build"
+    # -filecaps -redistributable -savedconfig"
     os.environ["EGIT_CLONE_TYPE"] = "shallow"
 
     opts = {
