@@ -66,6 +66,7 @@ runs:
 
       sudo python3 -m pip install --install-option="--system-prefix=/usr" git+git://github.com/gentoo/portage.git
       sudo python3 -m pip show --files portage
+      sudo find / -type f -iname 'portage.conf'
       git clone git://github.com/gentoo/portage.git
       sudo install -d /usr/share/portage
       sudo cp -va portage/cnf/* /usr/share/portage/
