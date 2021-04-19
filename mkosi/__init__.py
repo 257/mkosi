@@ -2498,6 +2498,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     kpkgs = [
         "app-admin/eselect",
+        "sys-kernel/linux-firmware",
         "sys-kernel/gentoo-kernel-bin",
         "sys-kernel/installkernel-systemd-boot",
         "sys-kernel/dracut",
