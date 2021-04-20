@@ -2432,9 +2432,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
-    os.environ["SYSROOT"] = root
-    os.environ["ROOT"] = root
-    os.environ["EPREFIX"] = "/"
+    # os.environ["SYSROOT"] = root
+    # os.environ["ROOT"] = root
+    # os.environ["EPREFIX"] = "/"
     os.environ["PORTDIR"] = portdir
     os.environ["PKGDIR"] = pkgdir
     os.environ["KERNEL_DIR"] = os.path.join(root, "usr/src/linux")
@@ -2450,11 +2450,11 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # os.environ["EGIT_CLONE_TYPE"] = "shallow"
     os.environ["BINPKG_COMPRESS"] = "gzip"
 
+        # "--root": root,
+        # "--sysroot": root,
+        # "--prefix": "/",
     opts = {
-        "--root": root,
         "--config-root": root,
-        "--sysroot": root,
-        "--prefix": "/",
         "--buildpkg": True,
         "--usepkg": True,
         "--keep-going": True,
@@ -2530,7 +2530,9 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
-    syspkgs = ["@system"]
+    # syspkgs = ["@system"]
+    opts["--nodeps"] = False
+    syspkgs = ["sys-devel/gcc", "sys-devel/binutils", "sys-libs/glibc"]
     if args.output_format == OutputFormat.gpt_btrfs:
         syspkgs.append("sys-fs/btrfs-progs")
     if args.ssh:
