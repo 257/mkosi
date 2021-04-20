@@ -2447,7 +2447,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
     os.environ["USE"] = "build symlink -filecaps -redistributable -savedconfig"
-    # os.environ["BINPKG_COMPRESS"] = "gzip"
+    # os.environ["EGIT_CLONE_TYPE"] = "shallow"
+    os.environ["BINPKG_COMPRESS"] = "gzip"
 
     opts = {
         "--root": root,
@@ -2516,14 +2517,13 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     blockers = [
         "app-arch/xz-utils",
     ]
-
     package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
     os.makedirs(package_accept_keywords, exist_ok=True)
     with open(os.path.join(package_accept_keywords, "amd64"), "a") as f:
         f.write(
             dedent(
                 """\
-                app-arch/xz-utils **
+                app-arch/xz-utils ~amd64
                 """
             )
         )
