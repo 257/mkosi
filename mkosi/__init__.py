@@ -2511,6 +2511,21 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     opts["--nodeps"] = True
     blockers = [
         "app-portage/elt-patches",
+        "sys-devel/gnuconfig",
+        "sys-apps/gentoo-functions",
+        "app-portage/elt-patches",
+        "sys-libs/ncurses",
+        "sys-libs/readline",
+        "app-shells/bash",
+        "app-arch/xz-utils",
+        "sys-apps/sed",
+        "dev-libs/libffi",
+        "sys-devel/m4",
+        "sys-devel/flex",
+        "sys-apps/diffutils",
+        "sys-devel/bison",
+        "sys-devel/patch",
+        "sys-devel/binutils-config",
     ]
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
