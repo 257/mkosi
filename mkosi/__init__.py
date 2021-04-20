@@ -2501,13 +2501,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     else:
         opts["--quiet-build"] = True
 
-    kpkgs = [
-        "sys-kernel/gentoo-sources",
-    ]
-    emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
-    run_action(emerge_config)
-    run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
-
     opts["--nodeps"] = True
     opts["--oneshot"] = True
     opts["--root-deps"] = True
@@ -2529,8 +2522,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "sys-devel/patch",
         "sys-devel/binutils-config",
     ]
-    emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
-    run_action(emerge_config)
     package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
     os.makedirs(package_accept_keywords, exist_ok=True)
     with open(os.path.join(package_accept_keywords, "amd64"), "a") as f:
@@ -2544,11 +2535,13 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
-    syspkgs = ["sys-devel/gcc", "sys-devel/binutils", "sys-libs/glibc"]
-    emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
+    kpkgs = [
+        "sys-kernel/gentoo-sources",
+    ]
+    emerge_config = load_emerge_config(action="build", args=kpkgs, opts=opts)
     run_action(emerge_config)
+    run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
 
-    opts["--nodeps"] = True
     syspkgs = ["@system"]
     if args.output_format == OutputFormat.gpt_btrfs:
         syspkgs.append("sys-fs/btrfs-progs")
