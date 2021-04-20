@@ -2530,8 +2530,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
-    # syspkgs = ["@system"]
-    opts["--nodeps"] = False
+    # opts["--nodeps"] = False
     syspkgs = ["sys-devel/gcc", "sys-devel/binutils", "sys-libs/glibc"]
     emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
     run_action(emerge_config)
