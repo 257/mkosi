@@ -2401,17 +2401,6 @@ def fix_gentoo_kernel_bin_make_install(root: str) -> None:
 
 @complete_step("Installing Gentoo")
 def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
-    gentoo_prefix_url = "https://gitweb.gentoo.org/repo/proj/prefix.git/plain/scripts/bootstrap-prefix.sh"
-    gentoo_prefix = os.path.join(root, "bootstrap-prefix.sh")
-    urllib.request.urlretrieve(gentoo_prefix_url, gentoo_prefix)
-    os.chmod(gentoo_prefix, 0o755)
-    stg = 1
-    cmdline = [gentoo_prefix, root, "stage1"]
-    run(cmdline)
-    cmdline = [gentoo_prefix, root, "stage2"]
-    run(cmdline)
-    run_workspace_command(["emerge", "-e", "@system"])
-
     try:
         import portage
         from _emerge.actions import load_emerge_config, run_action
