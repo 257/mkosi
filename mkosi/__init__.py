@@ -2432,9 +2432,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
-    os.environ["SYSROOT"] = root
+    # os.environ["SYSROOT"] = root
     os.environ["ROOT"] = root
-    os.environ["EPREFIX"] = root
     os.environ["PORTDIR"] = portdir
     os.environ["PKGDIR"] = pkgdir
     os.environ["KERNEL_DIR"] = os.path.join(root, "usr/src/linux")
@@ -2454,7 +2453,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     opts = {
         "--config-root": root,
         "--root": root,
-        "--sysroot": root,
+        # "--sysroot": root,
         "--buildpkg": True,
         "--usepkg": True,
         "--keep-going": True,
