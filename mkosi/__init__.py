@@ -2432,8 +2432,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
-    # os.environ["SYSROOT"] = root
-    # os.environ["ROOT"] = root
+    os.environ["SYSROOT"] = root
+    os.environ["ROOT"] = root
     # os.environ["EPREFIX"] = "/"
     os.environ["PORTDIR"] = portdir
     os.environ["PKGDIR"] = pkgdir
@@ -2450,11 +2450,11 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # os.environ["EGIT_CLONE_TYPE"] = "shallow"
     os.environ["BINPKG_COMPRESS"] = "gzip"
 
-        # "--root": root,
-        # "--sysroot": root,
         # "--prefix": "/",
     opts = {
         "--config-root": root,
+        "--root": root,
+        "--sysroot": root,
         "--buildpkg": True,
         "--usepkg": True,
         "--keep-going": True,
