@@ -2442,7 +2442,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # -pid-sandbox is required for cross compile scenarios
     os.environ[
         "FEATURES"
-    ] = "-userfetch -userpriv -usersync -usersandbox -sandbox -pid-sandbox -network-sandbox parallel-install"
+    ] = "-userfetch -userpriv -usersync -usersandbox -pid-sandbox -network-sandbox parallel-install"
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
