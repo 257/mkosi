@@ -2493,6 +2493,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     if "build-script" in args.debug:
         opts["--verbose"] = True
+        opts["--debug"] = True
         opts["--quiet-fail"] = True
         run_action(load_emerge_config(action="info", args=[], opts=opts))
         run_action(load_emerge_config(action="version", args=[], opts=opts))
