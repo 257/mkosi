@@ -2535,12 +2535,14 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "sys-kernel/linux-firmware",
     ]
     package_accept_keywords = os.path.join(root, "etc/portage/package.accept_keywords")
+    package_use = os.path.join(root, "etc/portage/package.use")
     os.makedirs(package_accept_keywords, exist_ok=True)
     with open(os.path.join(package_accept_keywords, "amd64"), "w") as f:
         f.write(
             dedent(
                 """\
                 sys-kernel/linux-firmware ~amd64
+                app-arch/xz-utils **
                 """
             )
         )
