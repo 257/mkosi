@@ -2401,6 +2401,13 @@ def fix_gentoo_kernel_bin_make_install(root: str) -> None:
 
 @complete_step("Installing Gentoo")
 def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
+    gentoo_prefix_url =
+    "https://gitweb.gentoo.org/repo/proj/prefix.git/plain/scripts/bootstrap-prefix.sh"
+    gentoo_prefix = os.path.join(root, "bootstrap-prefix.sh")
+    urllib.retrieve(gentoo_prefix_url, gentoo_prefix)
+    cmdline = [gentoo_prefix, root, "stage1"]
+    run(cmdline)
+
     try:
         import portage
         from _emerge.actions import load_emerge_config, run_action
@@ -2441,7 +2448,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # -pid-sandbox is required for cross compile scenarios
     os.environ[
         "FEATURES"
-    ] = "-userfetch -userpriv -usersync -usersandbox -pid-sandbox -network-sandbox parallel-install -binpkg-docompress"
+    ] = "-userfetch -userpriv -usersync -usersandbox -sandbox -pid-sandbox -network-sandbox parallel-install -binpkg-docompress"
     # systemd is hard dependancy for us at least because of bootctl(1)
     # sys-boot/systemd-boot could resolve this but then we're complicating life
     # because USE="systemd" could be set in many places
