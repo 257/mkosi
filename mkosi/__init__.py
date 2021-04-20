@@ -2461,6 +2461,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "--jobs": jobs,
         "--load-average": jobs - 1,
         "--noreplace": True,
+        "--oneshot": True,
+        "--root-deps": True,
     }
 
     os.makedirs(os.path.join(root, "etc/portage/repos.conf"), exist_ok=True)
