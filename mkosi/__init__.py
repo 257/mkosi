@@ -2493,6 +2493,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     if "build-script" in args.debug:
         opts["--verbose"] = True
+        opts["--quiet-fail"] = True
         run_action(load_emerge_config(action="info", args=[], opts=opts))
         run_action(load_emerge_config(action="version", args=[], opts=opts))
     else:
@@ -2505,11 +2506,15 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     run_action(emerge_config)
     run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
 
+    opts["--nodeps"] = True
     blockers = [
         "app-portage/elt-patches",
+    ]
+    emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
+    run_action(emerge_config)
+    blockers = [
         "app-arch/xz-utils",
     ]
-    opts["--nodeps"] = True
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
