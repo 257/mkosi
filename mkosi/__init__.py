@@ -2517,6 +2517,17 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     blockers = [
         "app-arch/xz-utils",
     ]
+
+    package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
+    os.makedirs(package_accept_keywords, exist_ok=True)
+    with open(os.path.join(package_accept_keywords, "amd64"), "a") as f:
+        f.write(
+            dedent(
+                """\
+                app-arch/xz-utils **
+                """
+            )
+        )
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
@@ -2534,15 +2545,13 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     kpkgs = [
         "sys-kernel/linux-firmware",
     ]
-    package_accept_keywords = os.path.join(root, "etc/portage/package.accept_keywords")
-    package_use = os.path.join(root, "etc/portage/package.use")
+    package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
     os.makedirs(package_accept_keywords, exist_ok=True)
-    with open(os.path.join(package_accept_keywords, "amd64"), "w") as f:
+    with open(os.path.join(package_accept_keywords, "amd64"), "a") as f:
         f.write(
             dedent(
                 """\
                 sys-kernel/linux-firmware ~amd64
-                app-arch/xz-utils **
                 """
             )
         )
