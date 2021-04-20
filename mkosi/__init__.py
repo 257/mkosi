@@ -2401,8 +2401,7 @@ def fix_gentoo_kernel_bin_make_install(root: str) -> None:
 
 @complete_step("Installing Gentoo")
 def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
-    gentoo_prefix_url =
-    "https://gitweb.gentoo.org/repo/proj/prefix.git/plain/scripts/bootstrap-prefix.sh"
+    gentoo_prefix_url = "https://gitweb.gentoo.org/repo/proj/prefix.git/plain/scripts/bootstrap-prefix.sh"
     gentoo_prefix = os.path.join(root, "bootstrap-prefix.sh")
     urllib.retrieve(gentoo_prefix_url, gentoo_prefix)
     cmdline = [gentoo_prefix, root, "stage1"]
