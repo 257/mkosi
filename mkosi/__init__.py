@@ -2448,6 +2448,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # because USE="systemd" could be set in many places
     os.environ["USE"] = "build symlink -filecaps -redistributable -savedconfig"
     os.environ["EGIT_CLONE_TYPE"] = "shallow"
+    os.environ["BINPKG_COMPRESS"] = "gzip"
 
     opts = {
         "--root": root,
