@@ -2432,7 +2432,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     os.makedirs(portdir, exist_ok=True)
 
     os.environ["PORTAGE_CONFIGROOT"] = root
-    # os.environ["SYSROOT"] = root
+    os.environ["SYSROOT"] = root
     os.environ["ROOT"] = root
     os.environ["PORTDIR"] = portdir
     os.environ["PKGDIR"] = pkgdir
@@ -2453,7 +2453,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     opts = {
         "--config-root": root,
         "--root": root,
-        # "--sysroot": root,
+        "--sysroot": root,
         "--buildpkg": True,
         "--usepkg": True,
         "--keep-going": True,
@@ -2510,8 +2510,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "app-portage/elt-patches",
         "sys-libs/ncurses",
         "sys-libs/readline",
-        "app-shells/bash",
-        "app-arch/xz-utils",
         "sys-apps/sed",
         "dev-libs/libffi",
         "sys-devel/m4",
