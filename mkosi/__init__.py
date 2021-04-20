@@ -2405,8 +2405,12 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     gentoo_prefix = os.path.join(root, "bootstrap-prefix.sh")
     urllib.request.urlretrieve(gentoo_prefix_url, gentoo_prefix)
     os.chmod(gentoo_prefix, 0o755)
+    stg = 1
     cmdline = [gentoo_prefix, root, "stage1"]
     run(cmdline)
+    cmdline = [gentoo_prefix, root, "stage2"]
+    run(cmdline)
+    run_workspace_command(["emerge", "-e", "@system"])
 
     try:
         import portage
