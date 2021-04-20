@@ -2448,7 +2448,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     # because USE="systemd" could be set in many places
     os.environ["USE"] = "build symlink -filecaps -redistributable -savedconfig"
     os.environ["EGIT_CLONE_TYPE"] = "shallow"
-    os.environ["BINPKG_COMPRESS"] = "gzip"
+    # os.environ["BINPKG_COMPRESS"] = "gzip"
 
     opts = {
         "--root": root,
@@ -2494,7 +2494,7 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
 
     if "build-script" in args.debug:
         opts["--verbose"] = True
-        opts["--debug"] = True
+        # opts["--debug"] = True
         opts["--quiet-fail"] = False
         run_action(load_emerge_config(action="info", args=[], opts=opts))
         run_action(load_emerge_config(action="version", args=[], opts=opts))
