@@ -2461,8 +2461,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
         "--jobs": jobs,
         "--load-average": jobs - 1,
         "--noreplace": True,
-        "--oneshot": True,
-        "--root-deps": True,
     }
 
     os.makedirs(os.path.join(root, "etc/portage/repos.conf"), exist_ok=True)
@@ -2511,6 +2509,8 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     run(['make', '-C', os.path.join(root, "usr/src/linux"), "allmodconfig"])
 
     opts["--nodeps"] = True
+    opts["--oneshot"] = True
+    opts["--root-deps"] = True
     blockers = [
         "app-portage/elt-patches",
         "sys-devel/gnuconfig",
@@ -2531,9 +2531,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     ]
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
-    blockers = [
-        "app-arch/xz-utils",
-    ]
     package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
     os.makedirs(package_accept_keywords, exist_ok=True)
     with open(os.path.join(package_accept_keywords, "amd64"), "a") as f:
@@ -2547,7 +2544,6 @@ def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: b
     emerge_config = load_emerge_config(action="build", args=blockers, opts=opts)
     run_action(emerge_config)
 
-    # opts["--nodeps"] = False
     syspkgs = ["sys-devel/gcc", "sys-devel/binutils", "sys-libs/glibc"]
     emerge_config = load_emerge_config(action="build", args=syspkgs, opts=opts)
     run_action(emerge_config)
