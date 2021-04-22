@@ -1034,6 +1034,8 @@ following *OS*es.
 
 * *OpenMandriva*
 
+* *Gentoo*
+
 In theory, any distribution may be used on the host for building
 images containing any other distribution, as long as the necessary
 tools are available. Specifically, any distribution that packages
@@ -1043,7 +1045,8 @@ distribution that packages `dnf` may be used to build *Fedora*,
 build *Arch Linux* images. Any distribution that packages `zypper` may
 be used to build *openSUSE* images. Any distribution that packages
 `yum` (or the newer replacement `dnf`) may be used to build *CentOS*
-images.
+images. Any distribution that packages `emerge` may be used to build
+*Gentoo* images.
 
 Currently, *Fedora* packages all relevant tools as of Fedora 28.
 
@@ -1089,7 +1092,7 @@ local directory:
 
 * `mkosi.default` may be used to configure mkosi's image building
   process. For example, you may configure the distribution to use
-  (`fedora`, `ubuntu`, `debian`, `arch`, `opensuse`, `mageia`, `openmandriva`) for the
+  (`fedora`, `ubuntu`, `debian`, `arch`, `opensuse`, `mageia`, `openmandriva`, `gentoo`) for the
   image, or additional distribution packages to install. Note that all
   options encoded in this configuration file may also be set on the
   command line, and this file is hence little more than a way to make
@@ -1462,7 +1465,7 @@ Hostname=image
 
 # REQUIREMENTS
 
-mkosi is packaged for various distributions: Debian, Ubuntu, Arch (in AUR), Fedora, OpenMandriva.
+mkosi is packaged for various distributions: Debian, Ubuntu, Arch (in AUR), Fedora, OpenMandriva, Gentoo.
 It is usually easiest to use the distribution package.
 
 The current version requires systemd 233 (or actually, systemd-nspawn of it).
