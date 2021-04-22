@@ -1433,6 +1433,8 @@ def mount_cache(args: CommandLineArguments, root: Path) -> Generator[None, None,
             caches = [mount_bind(args.cache_path, root / "var/cache/apt/archives")]
         elif args.distribution == Distribution.arch:
             caches = [mount_bind(args.cache_path, root / "var/cache/pacman/pkg")]
+        elif args.distribution == Distribution.gentoo:
+            caches = [mount_bind(args.cache_path, root / "var/cache/binpkgs")]
         elif args.distribution == Distribution.opensuse:
             caches = [mount_bind(args.cache_path, root / "var/cache/zypp/packages")]
         elif args.distribution == Distribution.photon:
@@ -1475,6 +1477,7 @@ def configure_dracut(args: CommandLineArguments, root: Path) -> None:
         Distribution.debian,
         Distribution.mageia,
         Distribution.openmandriva,
+        Distribution.gentoo,
     ):
         dracut_dir.joinpath("30-mkosi-uefi-stub.conf").write_text(
             "uefi_stub=/usr/lib/systemd/boot/efi/linuxx64.efi.stub\n"
@@ -2181,6 +2184,33 @@ def install_openmandriva(args: CommandLineArguments, root: Path, do_run_build_sc
     invoke_dnf(args, root, args.repositories or ["openmandriva", "updates"], packages, do_run_build_script)
 
     disable_pam_securetty(root)
+
+
+@complete_step("Installing Gentoo")
+def install_gentoo(
+    args: CommandLineArguments,
+    root: Path,
+    do_run_build_script: bool
+) -> None:
+    from .gentoo import Gentoo
+
+    # this will fetch/fix stage3 tree and portage confgired for mkosi
+    gentoo = Gentoo(args, root, do_run_build_script)
+
+    if gentoo.pkgs_fs:
+        gentoo.invoke_emerge(args, root, pkgs=gentoo.pkgs_fs)
+
+    if not do_run_build_script and args.bootable:
+        # GENTOO_DONTMOVE: must be called before merging sys-kernel/dracut which
+        # is part of gentoo_pkgs_boot
+        configure_dracut(args, root)
+        gentoo.invoke_emerge(args, root, pkgs=gentoo.pkgs_boot)
+
+    if args.packages:
+        gentoo.invoke_emerge(args, root, pkgs=args.packages)
+
+    if do_run_build_script:
+        gentoo.invoke_emerge(args, root, pkgs=args.build_packages)
 
 
 def invoke_yum(
@@ -2943,6 +2973,7 @@ def install_distribution(args: CommandLineArguments, root: Path, do_run_build_sc
         Distribution.clear: install_clear,
         Distribution.photon: install_photon,
         Distribution.openmandriva: install_openmandriva,
+        Distribution.gentoo: install_gentoo,
     }
 
     disable_kernel_install(args, root)
@@ -3292,7 +3323,10 @@ def install_boot_loader(
         if args.bios_partno and args.distribution != Distribution.clear:
             grub = (
                 "grub"
-                if args.distribution in (Distribution.ubuntu, Distribution.debian, Distribution.arch)
+                if args.distribution in (Distribution.ubuntu,
+                                        Distribution.debian,
+                                        Distribution.arch,
+                                        Distribution.gentoo)
                 else "grub2"
             )
             # TODO: Just use "grub" once https://github.com/systemd/systemd/pull/16645 is widely available.
@@ -3936,6 +3970,10 @@ def install_unified_kernel(
                     f"{prefix}/{args.machine_id}/{kver.name}",
                     "",
                 ]
+                if args.distribution == Distribution.gentoo:
+                    from .gentoo import kimg_path
+
+                    cmdline[4] = f"/usr/src/linux-{kver.name}/{kimg_path}"
 
                 # Pass some extra meta-info to the script via
                 # environment variables. The script uses this to name
@@ -5357,6 +5395,10 @@ def parse_args(argv: Optional[List[str]] = None) -> Dict[str, argparse.Namespace
 
         args_all["default"] = args
 
+    if args_all["default"].distribution == Distribution.gentoo:
+        from .gentoo import try_import_portage
+        try_import_portage(root=Path(), dry_run=True)
+
     return args_all
 
 
@@ -5818,6 +5860,8 @@ def load_args(args: argparse.Namespace) -> CommandLineArguments:
             args.release = "3.0"
         elif args.distribution == Distribution.openmandriva:
             args.release = "cooker"
+        elif args.distribution == Distribution.gentoo:
+            args.release = "17.1"
         else:
             args.release = "rolling"
 
@@ -6958,6 +7002,7 @@ def find_qemu_firmware() -> Tuple[Path, bool]:
             "i386": ["/usr/share/edk2/ovmf-ia32/OVMF_CODE.secboot.fd"],
         }.get(platform.machine(), []),
         "/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd",
+        "/usr/share/edk2-ovmf/OVMF_CODE.secboot.fd",  # GENTOO:
         "/usr/share/qemu/OVMF_CODE.secboot.fd",
         "/usr/share/ovmf/OVMF.secboot.fd",
     ]
@@ -6983,6 +7028,7 @@ def find_qemu_firmware() -> Tuple[Path, bool]:
         # After that, we try some generic paths and hope that if they exist,
         # they’ll correspond to the current architecture, thanks to the package manager.
         "/usr/share/edk2/ovmf/OVMF_CODE.fd",
+        "/usr/share/edk2-ovmf/OVMF_CODE.fd",  # GENTOO:
         "/usr/share/qemu/OVMF_CODE.fd",
         "/usr/share/ovmf/OVMF.fd",
     ]
@@ -7003,6 +7049,7 @@ def find_ovmf_vars() -> Path:
         OVMF_VARS_LOCATIONS += ["/usr/share/edk2/ovmf-ia32/OVMF_VARS.fd"]
 
     OVMF_VARS_LOCATIONS += ["/usr/share/edk2/ovmf/OVMF_VARS.fd",
+                            "/usr/share/edk2-ovmf/OVMF_VARS.fd",  # GENTOO:
                             "/usr/share/qemu/OVMF_VARS.fd",
                             "/usr/share/ovmf/OVMF_VARS.fd"]
 
