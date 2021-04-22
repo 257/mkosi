@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - gentoo-staging
   pull_request:
     branches:
       - main

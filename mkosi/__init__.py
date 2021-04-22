@@ -18,6 +18,7 @@ import glob
 import hashlib
 import http.server
 import json
+import multiprocessing
 import os
 import platform
 import re
@@ -29,6 +30,7 @@ import stat
 import string
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import urllib.parse
@@ -333,6 +335,7 @@ class Distribution(enum.Enum):
     clear = 9
     photon = 10
     openmandriva = 11
+    gentoo = 12
 
     def __str__(self) -> str:
         return self.name
@@ -541,6 +544,25 @@ DEBIAN_ARCHITECTURES = {
     "aarch64": "arm64",
     "armhfp": "armhf",
 }
+
+# Gentoo globals
+try:
+    from portage.package.ebuild.config import config  # type: ignore
+
+    portage_cfg: config
+    EMERGE_UPDATE_OPTS: Set[str]
+    emerge_default_opts: Set[str]
+    portage_use_flags: Set[str]
+    portage_features: Set[str]
+    gentoo_arch: str
+    gentoo_kimg_path: str
+    UNINSTALL_IGNORE_INI: Set[str]
+    gentoo_pkgs_boot: List[Set[str]]
+    gentoo_pkgs_sys: Set[str]
+    gentoo_pkgs_fs: Set[str]
+    grub_platforms: Set[str]
+except ImportError:
+    pass
 
 
 class GPTRootTypePair(NamedTuple):
@@ -1620,6 +1642,8 @@ def mount_cache(args: CommandLineArguments, root: str) -> Generator[None, None, 
             caches = [mount_bind(args.cache_path, os.path.join(root, "var/cache/apt/archives"))]
         elif args.distribution == Distribution.arch:
             caches = [mount_bind(args.cache_path, os.path.join(root, "var/cache/pacman/pkg"))]
+        elif args.distribution == Distribution.gentoo:
+            caches = [mount_bind(args.cache_path, os.path.join(root, "var/cache/binpkgs"))]
         elif args.distribution == Distribution.opensuse:
             caches = [mount_bind(args.cache_path, os.path.join(root, "var/cache/zypp/packages"))]
         elif args.distribution == Distribution.photon:
@@ -1660,6 +1684,7 @@ def configure_dracut(args: CommandLineArguments, root: str) -> None:
         Distribution.debian,
         Distribution.mageia,
         Distribution.openmandriva,
+        Distribution.gentoo,
     ):
         with open(os.path.join(dracut_dir, "30-mkosi-uefi-stub.conf"), "w") as f:
             f.write("uefi_stub=/usr/lib/systemd/boot/efi/linuxx64.efi.stub\n")
@@ -2321,6 +2346,449 @@ def install_openmandriva(args: CommandLineArguments, root: str, do_run_build_scr
     invoke_dnf(args, root, args.repositories or ["openmandriva", "updates"], packages, do_run_build_script)
 
     disable_pam_securetty(root)
+
+
+@complete_step("Installing Gentoo")
+def install_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
+    gentoo_cfg_portage(args, root, do_run_build_script)
+
+    host, _ = detect_distribution()
+    with complete_step(f"Building {args.distribution} on {host}"):
+        if host == Distribution.gentoo:
+            gentoo_on_gentoo(args, root, do_run_build_script)
+        else:
+            gentoo_on_nix(args, root, do_run_build_script)
+
+
+def gentoo_on_gentoo(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
+    """under construction!"""
+    gentoo_on_nix(args, root, do_run_build_script)
+
+
+def gentoo_on_nix(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
+    # http://distfiles.gentoo.org/releases/amd64/autobuilds/latest-stage3.txt
+    stage3tsf_path_url = urllib.parse.urljoin(
+        portage_cfg["GENTOO_MIRRORS"],
+        f"releases/{gentoo_arch}/autobuilds/latest-stage3.txt",
+    )
+    stage3_tar = ""
+    with urllib.request.urlopen(stage3tsf_path_url) as r:
+        # 20210425T214502Z/stage3-amd64-20210425T214502Z.tar.xz 203280156
+        # 20210323T005051Z/stage3-arm64-systemd-20210323T005051Z.tar.xz 196362344
+        lines = list(r)
+        for line in lines:
+            l = line.decode("utf-8")
+            # FIXME: this is ugly. i dunno file's format etc... hence possible
+            # bogous assumptions.
+            if not stage3_tar:
+                if l[0] == "#":
+                    continue
+                else:
+                    stage3_tar, _, _ = l.partition(" ")
+
+    stage3_url_path = urllib.parse.urljoin(
+        portage_cfg["GENTOO_MIRRORS"],
+        f"releases/{gentoo_arch}/autobuilds/{stage3_tar}",
+    )
+    stage3_tar_path = os.path.join(portage_cfg["DISTDIR"], stage3_tar)
+    if not os.path.isfile(stage3_tar_path):
+        with complete_step(f"Fetching {stage3_url_path}"):
+            os.makedirs(os.path.dirname(stage3_tar_path), exist_ok=True)
+            urllib.request.urlretrieve(stage3_url_path, stage3_tar_path)
+
+    with tarfile.open(stage3_tar_path) as tfd:
+        MkosiPrinter.print_step(f"Extracting {os.path.basename(stage3_tar)}")
+        # usrmerge mess
+        bins = []
+        usr = []
+        usrreg = re.compile("^[.][/](etc|usr|var)")
+        binreg = re.compile("^[.][/](sbin|bin|lib|lib64)")
+        devreg = re.compile("^[.][/]dev")
+        runreg = re.compile("^[.][/]run")
+
+        members = tfd.getmembers()
+        usrpath = os.path.join(root, "usr")
+        uninstall_ignore = ["./var/run", "./var/lock", "./bin/awk"]
+        for dir in UNINSTALL_IGNORE_INI:
+            uninstall_ignore += [os.path.join("./", dir)] + [os.path.join("./usr", dir)]
+
+        for tarinfo in members:
+            if tarinfo.name in uninstall_ignore or devreg.match(tarinfo.name) or runreg.match(tarinfo.name):
+                if "build-script" in arg_debug:
+                    print("%32.32s -> /dev/null" % (tarinfo.name))
+                continue
+            elif (
+                tarinfo.issym()
+                and (os.path.dirname(tarinfo.name) == "./usr/bin")
+                and (os.path.dirname(tarinfo.linkname) == "../../bin")
+            ):
+                if "build-script" in arg_debug:
+                    print("%32.32s -> %-32.32s -> /dev/null" % (tarinfo.name, tarinfo.linkname))
+                continue
+            elif usrreg.match(tarinfo.name):
+                usr.append(tarinfo)
+            elif binreg.match(tarinfo.name):
+                bins.append(tarinfo)
+            else:
+                print("%32.32s -> /dev/null" % (tarinfo.name))
+                continue
+
+        try:
+            tfd.extractall(usrpath, bins, numeric_owner=True)
+            tfd.extractall(root, usr, numeric_owner=True)
+        except FileExistsError as e:
+            pass
+
+    gentoo_baselayout(args, root)
+
+    if "build-script" in arg_debug:
+        gentoo_invoke_emerge(args, root, actions={"--info"})
+
+    # avoiding roundabout dependencies
+    # homed:
+    portage_use_flags.remove("systemd")
+    gentoo_invoke_emerge(args, root, pkgs={"sys-fs/lvm2"})
+    portage_use_flags.add("systemd")
+    gentoo_invoke_emerge(args, root, pkgs={"virtual/libudev"})
+
+    gentoo_invoke_emerge(args, root, pkgs=gentoo_pkgs_sys, opts=EMERGE_UPDATE_OPTS)
+
+    # BUG: https://bugs.gentoo.org/788190
+    with open(os.path.join(root, "etc/os-release"), "a") as f:
+        f.write(f"VERSION_ID=args.release\n")
+
+    if gentoo_pkgs_fs:
+        gentoo_invoke_emerge(args, root, pkgs=gentoo_pkgs_fs)
+
+    if not do_run_build_script and args.bootable:
+        # DONT MOVE: must be called before merging sys-kernel/dracut
+        configure_dracut(args, root)
+        # dracut is emerge'ed here
+        for p in gentoo_pkgs_boot:
+            gentoo_invoke_emerge(args, root, pkgs=p)
+        if args.esp_partno:
+            p = {"sys-kernel/gentoo-kernel-bin"}
+            gentoo_invoke_emerge(args, root, pkgs=p, actions={"--config"})
+
+    if args.packages:
+        gentoo_invoke_emerge(args, root, pkgs=set(args.packages))
+
+
+def gentoo_invoke_emerge(
+    args: CommandLineArguments,
+    root: str,
+    inside_stage3: bool = True,
+    pkgs: Set[str] = set(),
+    actions: Set[str] = set(),
+    opts: Set[str] = set(),
+) -> None:
+    if not inside_stage3:
+        from _emerge.main import emerge_main  # type: ignore
+
+        os.environ["FEATURES"] = " ".join(portage_features)
+        os.environ["BOOTSTRAP_USE"] = " ".join(portage_use_flags)
+        os.environ["USE"] = " ".join(portage_use_flags)
+        os.environ["GRUB_PLATFORMS"] = " ".join(grub_platforms)
+        os.environ["EGIT_CLONE_TYPE"] = "shallow"
+
+        PREFIX_OPTS = {
+            "--config-root=" + root,
+            "--root=" + root,
+            "--sysroot=" + root,
+        }
+        emerge_main(pkgs.union(opts, PREFIX_OPTS, emerge_default_opts, actions))
+    else:
+        cmdline = ["/usr/bin/emerge"]
+
+        emerge_env = {
+            "FEATURES": " ".join(portage_features),
+            "BOOTSTRAP_USE": " ".join(portage_use_flags),
+            "USE": " ".join(portage_use_flags),
+            "GRUB_PLATFORMS": " ".join(grub_platforms),
+            "EGIT_CLONE_TYPE": "shallow",
+        }
+
+        cmdline.extend(pkgs)
+        cmdline.extend(emerge_default_opts)
+        cmdline.extend(actions)
+
+        with complete_step(f"Invoking emerg(1) inside stage3"):
+            run_workspace_command(
+                args,
+                root,
+                cmdline,
+                network=True,
+                env=emerge_env,
+                nspawn_params=[
+                    "--capability=CAP_SYS_ADMIN,CAP_MKNOD",
+                    "--bind=" + portage_cfg["PORTDIR"],
+                    "--bind=" + portage_cfg["DISTDIR"],
+                    "--bind=" + portage_cfg["PKGDIR"],
+                ],
+            )
+
+
+def gentoo_cfg_portage(args: CommandLineArguments, root: str, do_run_build_script: bool) -> None:
+    NO_PORTAGE_DIE_MSG = "You need portage(5) - the heart of Gentoo"
+    PORTAGE_GIT_URL = "https://gitweb.gentoo.org/proj/portage.git"
+    try:
+        # for minimal info about where to put all things portage
+        from portage.const import (  # type: ignore
+            CUSTOM_PROFILE_PATH,
+            GLOBAL_CONFIG_PATH,
+            MAKE_CONF_FILE,
+            PORTAGE_PACKAGE_ATOM,
+            PROFILE_PATH,
+            USER_CONFIG_PATH,
+        )
+    except ImportError:
+        die(f"{NO_PORTAGE_DIE_MSG} : {PORTAGE_GIT_URL}")
+
+    global portage_cfg
+    portage_cfg = config(config_root=root, target_root=root, sysroot=root, eprefix=None)
+    if "build-script" in arg_debug:
+        for c in portage_cfg:
+            print("%-32.32s = %-64.64s" % (c, portage_cfg[c]))
+
+    jobs = multiprocessing.cpu_count()
+    global emerge_default_opts
+    emerge_default_opts = {
+        "--buildpkg=y",
+        "--usepkg=y",
+        "--keep-going=y",
+        "--jobs=" + str(jobs),
+        "--load-average=" + str(jobs - 1),
+        "--nospinner",
+    }
+    if "build-script" in arg_debug:
+        emerge_default_opts |= {"--verbose"}
+        emerge_default_opts |= {"--quiet=n"}
+        emerge_default_opts |= {"--quiet-fail=n"}
+    else:
+        emerge_default_opts |= {"--quiet-build"}
+        emerge_default_opts |= {"--quiet"}
+
+    global EMERGE_UPDATE_OPTS
+    EMERGE_UPDATE_OPTS = {
+        "--update",
+        "--tree",
+        "--changed-use",
+        "--newuse",
+        "--deep",
+        "--with-bdeps=y",
+        "--complete-graph-if-new-use=y",
+    }
+
+    # 'systemd' is hard dependancy?
+    # 'build' for baselayout
+    # 'git' for sync-type=git
+    # 'symlink' for kernel
+    global portage_use_flags
+    portage_use_flags = {
+        "build",  # DO NOT MOVE!
+        "systemd",
+        "-homed",
+        "initramfs",
+        "git",
+        "symlink",
+        "sdl",
+        "-filecaps",
+        "-savedconfig",
+        "-split-bin",
+        "-split-sbin",
+        "-split-usr",
+    }
+
+    # -user* are required for access to USER_CONFIG_PATH
+    # -pid-sandbox is required for cross compile scenarios
+    global portage_features
+    portage_features = {
+        "-userfetch",
+        "-userpriv",
+        "-usersync",
+        "-usersandbox",
+        "-sandbox",
+        "-pid-sandbox",
+        "-network-sandbox",
+        "parallel-install",
+        "buildpkg",
+        "binpkg-multi-instance",
+        "-binpkg-docompress",
+        "getbinpkg",
+        "-candy",
+    }
+    # TODO:
+    # portage_features.add("ccache")
+    os.environ["FEATURES"] = " ".join(portage_features)
+    os.environ["BOOTSTRAP_USE"] = " ".join(portage_use_flags)
+    os.environ["USE"] = os.environ["BOOTSTRAP_USE"]
+    os.environ["EGIT_CLONE_TYPE"] = "shallow"
+
+    GENTOO_ARCHITECTURES = {
+        "x86_64": ("amd64", "arch/x86/boot/bzImage"),
+        "aarch64": ("arm64", "arch/arm64/boot/Image.gz"),
+        "armv7l": ("arm", "arch/arm/boot/zImage"),
+    }
+    global gentoo_arch, gentoo_kimg_path
+    if args.architecture:
+        gentoo_arch, gentoo_kimg_path = GENTOO_ARCHITECTURES[args.architecture]
+    else:
+        gentoo_arch, gentoo_kimg_path = GENTOO_ARCHITECTURES["x86_64"]
+
+    arch_profile = os.path.join("profiles/default/linux", gentoo_arch, args.release)
+    profile_path = os.path.join(root, PROFILE_PATH)
+    # don't overwrite user's chosen profile, users may set it in skeleton_trees
+    if not os.path.islink(profile_path):
+        MkosiPrinter.print_step(f"{args.distribution} setting Profile")
+        os.makedirs(os.path.join(root, USER_CONFIG_PATH), exist_ok=True)
+        os.symlink(os.path.join(portage_cfg["PORTDIR"], arch_profile), profile_path)
+
+    global UNINSTALL_IGNORE_INI
+    UNINSTALL_IGNORE_INI = {
+        "bin",
+        "sbin",
+        "lib",
+        "lib64",
+    }
+    uninstall_ignore = {"${UNINSTALL_IGNORE}"}
+    for fname in UNINSTALL_IGNORE_INI:
+        uninstall_ignore |= {" " + os.path.join("/", fname) + " " + os.path.join("/usr", fname)}
+    with open(os.path.join(root, MAKE_CONF_FILE), "a") as f:
+        f.write(dedent(f'UNINSTALL_IGNORE = "{uninstall_ignore}"'))
+
+    os.makedirs(os.path.join(root, CUSTOM_PROFILE_PATH), exist_ok=True)
+    with open(os.path.join(root, CUSTOM_PROFILE_PATH, "use.mask"), "w") as f:
+        f.write(
+            dedent(
+                """\
+                split-bin
+                split-sbin
+                split-usr
+                """
+            )
+        )
+    os.makedirs(os.path.join(root, CUSTOM_PROFILE_PATH), exist_ok=True)
+    with open(os.path.join(root, CUSTOM_PROFILE_PATH, "use.force"), "w") as f:
+        f.write(
+            dedent(
+                """\
+                -split-bin
+                -split-sbin
+                -split-usr
+                """
+            )
+        )
+
+    package_accept_keywords = os.path.join(root, USER_CONFIG_PATH, "package.accept_keywords")
+    os.makedirs(package_accept_keywords, exist_ok=True)
+    with open(os.path.join(package_accept_keywords, gentoo_arch), "a") as f:
+        # pambase is for homed
+        f.write(
+            dedent(
+                f"""\
+                sys-kernel/linux-firmware ~{gentoo_arch}
+                sys-auth/pambase ~{gentoo_arch}
+                sys-kernel/gentoo-kernel-bin ~{gentoo_arch}
+                virtual/dist-kernel ~{gentoo_arch}
+                """
+            )
+        )
+
+    package_license = os.path.join(root, USER_CONFIG_PATH, "package.license")
+    with open(package_license, "a") as f:
+        f.write("sys-kernel/linux-firmware @BINARY-REDISTRIBUTABLE")
+
+    with complete_step(f"{args.distribution}: patching dracut [https://bugs.gentoo.org/765208]"):
+        patchdir = os.path.join(root, USER_CONFIG_PATH, "patch")
+        dracut_atom = "sys-kernel/dracut"
+        os.makedirs(os.path.join(patchdir, dracut_atom), exist_ok=True)
+        bug765208 = os.path.join(patchdir, dracut_atom, "bug765208.patch")
+        dracut_path_url = "https://765208.bugs.gentoo.org/attachment.cgi?id=683770"
+        urllib.request.urlretrieve(dracut_path_url, bug765208)
+        with open(os.path.join(package_accept_keywords, "bug765208"), "a") as f:
+            f.write(dedent(f"""={dracut_atom}-053 ~{gentoo_arch}"""))
+
+    os.makedirs(os.path.join(root, USER_CONFIG_PATH, "repos.conf"), exist_ok=True)
+    with open(os.path.join(root, USER_CONFIG_PATH, "repos.conf", "eselect-repo.conf"), "w") as f:
+        f.write(
+            dedent(
+                f"""\
+                [gentoo]
+                location = {portage_cfg["PORTDIR"]}
+                # sync-uri = https://anongit.gentoo.org/git/repo/gentoo.git
+                sync-uri = https://github.com/gentoo/gentoo.git
+                sync-type = git
+                sync-dept = 1
+                """
+            )
+        )
+
+    package_use = os.path.join(root, USER_CONFIG_PATH, "package.use")
+    os.makedirs(package_use, exist_ok=True)
+    with open(os.path.join(package_use, "systemd"), "a") as f:
+        # repart for usronly
+        f.write(
+            dedent(
+                f"""\
+                # sys-apps/systemd http
+                # sys-apps/systemd cgroup-hybrid
+                sys-apps/systemd gnuefi
+                # sys-apps/systemd -pkcs11
+                # sys-apps/systemd importd lzma
+                sys-apps/systemd homed cryptsetup
+                # sys-apps/systemd repart
+                # sys-apps/systemd -cgroup-hybrid
+                # sys-apps/systemd vanilla
+                # sys-apps/systemd policykit
+                # sys-fs/lvm2 device-mapper-only -thin
+                """
+            )
+        )
+        global gentoo_pkgs_boot, gentoo_pkgs_sys, gentoo_pkgs_fs, grub_platforms
+        grub_platforms = set()
+        if not do_run_build_script and args.bootable:
+            MkosiPrinter.print_step(f"{args.distribution}: packages to install")
+            if args.esp_partno:
+                gentoo_pkgs_boot = [{"sys-kernel/installkernel-systemd-boot"}]
+            elif args.bios_partno:
+                gentoo_pkgs_boot = [{"sys-boot/grub"}]
+                grub_platforms = {"coreboot", "emu", "qemu", "pc"}
+                os.environ["GRUB_PLATFORMS"] = " ".join(grub_platforms)
+
+            gentoo_pkgs_boot.append(
+                {
+                    "sys-kernel/gentoo-kernel-bin",
+                    "sys-firmware/edk2-ovmf",
+                    "sys-kernel/linux-firmware",
+                }
+            )
+
+        gentoo_pkgs_sys = {"@system"}
+
+        gentoo_pkgs_fs = {"sys-fs/dosfstools"}
+        if args.output_format in (OutputFormat.subvolume, OutputFormat.gpt_btrfs):
+            gentoo_pkgs_fs.add("sys-fs/btrfs-progs")
+        elif args.output_format == OutputFormat.gpt_xfs:
+            gentoo_pkgs_fs.add("sys-fs/xfsprogs")
+        elif args.output_format == OutputFormat.gpt_squashfs:
+            gentoo_pkgs_fs.add("sys-fs/squashfs-tools")
+
+        if args.encrypt:
+            gentoo_pkgs_fs.add("cryptsetup")
+            gentoo_pkgs_fs.add("device-mapper")
+
+        if args.ssh:
+            gentoo_pkgs_fs.add("net-misc/openssh")
+
+        gentoo_invoke_emerge(args, root, inside_stage3=False, actions={"--sync"})
+
+
+def gentoo_baselayout(args: CommandLineArguments, root: str) -> None:
+    MkosiPrinter.print_step(f"{args.distribution}: usrmerge layout")
+    # TOTHINK: sticky bizness when when image profile != host profile
+    gentoo_invoke_emerge(args, root, inside_stage3=False, pkgs={"sys-apps/baselayout"})
+    portage_use_flags.remove("build")
+    os.environ["USE"] = " ".join(portage_use_flags)
 
 
 def invoke_yum(
@@ -3074,6 +3542,7 @@ def install_distribution(args: CommandLineArguments, root: str, do_run_build_scr
         Distribution.clear: install_clear,
         Distribution.photon: install_photon,
         Distribution.openmandriva: install_openmandriva,
+        Distribution.gentoo: install_gentoo,
     }
 
     disable_kernel_install(args, root)
@@ -3391,9 +3860,14 @@ def write_grub_config(args: CommandLineArguments, root: str) -> None:
     else:
 
         def jj(line: str) -> str:
-            if line.startswith("GRUB_CMDLINE_LINUX="):
+            if line.startswith("GRUB_CMDLINE_LINUX=") or line.startswith("#GRUB_CMDLINE_LINUX="):
                 return grub_cmdline
             if args.qemu_headless:
+                # GENTOO: uses the one for both input and output
+                # this will leave the following residue one line above (see below):
+                # '# Uncomment to disable graphical terminal (grub-pc only)'
+                # if "GRUB_TERMINAL" in line:
+                #     return 'GRUB_TERMINAL="console serial"'
                 if "GRUB_TERMINAL_INPUT" in line:
                     return 'GRUB_TERMINAL_INPUT="console serial"'
                 if "GRUB_TERMINAL_OUTPUT" in line:
@@ -3405,6 +3879,9 @@ def write_grub_config(args: CommandLineArguments, root: str) -> None:
         if args.qemu_headless:
             with open(grub_config, "a") as f:
                 f.write('GRUB_SERIAL_COMMAND="serial --unit=0 --speed 115200"\n')
+                # GENTOO: this is clean but fragments the code
+                if args.distribution == Distribution.gentoo:
+                    f.write('GRUB_TERMINAL="console serial"\n')
 
 
 def install_grub(args: CommandLineArguments, root: str, loopdev: str, grub: str) -> None:
@@ -3480,7 +3957,8 @@ def install_boot_loader(
         if args.bios_partno and args.distribution != Distribution.clear:
             grub = (
                 "grub"
-                if args.distribution in (Distribution.ubuntu, Distribution.debian, Distribution.arch)
+                if args.distribution
+                in (Distribution.ubuntu, Distribution.debian, Distribution.arch, Distribution.gentoo)
                 else "grub2"
             )
             # TODO: Just use "grub" once https://github.com/systemd/systemd/pull/16645 is widely available.
@@ -4037,6 +4515,8 @@ def install_unified_kernel(
                     f"{prefix}/{args.machine_id}/{kver.name}",
                     "",
                 ]
+                if args.distribution == Distribution.gentoo:
+                    cmdline[4] = f"/usr/src/linux-{kver.name}/{gentoo_kimg_path}"
 
                 # Pass some extra meta-info to the script via
                 # environment variables. The script uses this to name
@@ -5710,6 +6190,8 @@ def load_args(args: argparse.Namespace) -> CommandLineArguments:
             args.release = "3.0"
         elif args.distribution == Distribution.openmandriva:
             args.release = "cooker"
+        elif args.distribution == Distribution.gentoo:
+            args.release = "17.1"
         else:
             args.release = "rolling"
 
@@ -6275,7 +6757,11 @@ def setup_ssh(
     # which introduces non-trivial issue when trying to cache it.
 
     if not cached:
-        run(["systemctl", "--root", root, "enable", unit])
+        if args.distribution == Distribution.gentoo:
+            cmdline = ["systemctl", "enable", unit]
+            run_workspace_command(args, root, cmdline)
+        else:
+            run(["systemctl", "--root", root, "enable", unit])
 
     if for_cache:
         return None
@@ -6848,6 +7334,8 @@ def find_qemu_firmware() -> Tuple[str, bool]:
         FIRMWARE_LOCATIONS.append("/usr/share/edk2/ovmf-ia32/OVMF_CODE.secboot.fd")
 
     FIRMWARE_LOCATIONS.append("/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd")
+    # GENTOO:
+    FIRMWARE_LOCATIONS.append("/usr/share/edk2-ovmf/OVMF_CODE.secboot.fd")
     FIRMWARE_LOCATIONS.append("/usr/share/qemu/OVMF_CODE.secboot.fd")
     FIRMWARE_LOCATIONS.append("/usr/share/ovmf/OVMF.secboot.fd")
 
@@ -6876,6 +7364,8 @@ def find_qemu_firmware() -> Tuple[str, bool]:
     # After that, we try some generic paths and hope that if they exist,
     # they’ll correspond to the current architecture, thanks to the package manager.
     FIRMWARE_LOCATIONS.append("/usr/share/edk2/ovmf/OVMF_CODE.fd")
+    # GENTOO:
+    FIRMWARE_LOCATIONS.append("/usr/share/edk2-ovmf/OVMF_CODE.fd")
     FIRMWARE_LOCATIONS.append("/usr/share/qemu/OVMF_CODE.fd")
     FIRMWARE_LOCATIONS.append("/usr/share/ovmf/OVMF.fd")
 
@@ -6895,6 +7385,8 @@ def find_ovmf_vars() -> str:
         OVMF_VARS_LOCATIONS.append("/usr/share/edk2/ovmf-ia32/OVMF_VARS.fd")
 
     OVMF_VARS_LOCATIONS.append("/usr/share/edk2/ovmf/OVMF_VARS.fd")
+    # GENTOO:
+    OVMF_VARS_LOCATIONS.append("/usr/share/edk2-ovmf/OVMF_VARS.fd")
     OVMF_VARS_LOCATIONS.append("/usr/share/qemu/OVMF_VARS.fd")
     OVMF_VARS_LOCATIONS.append("/usr/share/ovmf/OVMF_VARS.fd")
 
