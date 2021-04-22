@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - gentoo-next
   pull_request:
     branches:
       - main

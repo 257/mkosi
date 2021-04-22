@@ -56,6 +56,7 @@ class Distribution(enum.Enum):
     clear = 9
     photon = 10
     openmandriva = 11
+    gentoo = 12
 
     def __str__(self) -> str:
         return self.name
@@ -366,7 +367,7 @@ def run_workspace_command(
     network: bool = False,
     env: Optional[Dict[str, str]] = None,
     nspawn_params: Optional[List[str]] = None,
-) -> None:
+) -> CompletedProcess:
     cmdline = [
         "systemd-nspawn",
         "--quiet",
@@ -394,8 +395,13 @@ def run_workspace_command(
     result = run(cmdline + ["--"] + cmd, check=False)
     if result.returncode != 0:
         if "workspace-command" in ARG_DEBUG:
-            run(cmdline, check=False)
-        die(f"Workspace command `{' '.join(cmd)}` returned non-zero exit code {result.returncode}.")
+            return run(cmdline, check=False)
+        elif args.distribution == Distribution.gentoo:
+            return result
+        else:
+            die(f"Workspace command `{' '.join(cmd)}` returned non-zero exit code {result.returncode}.")
+    else:
+        return result
 
 
 @contextlib.contextmanager
@@ -510,9 +516,17 @@ def write_grub_config(args: CommandLineArguments, root: str) -> None:
     else:
 
         def jj(line: str) -> str:
-            if line.startswith("GRUB_CMDLINE_LINUX="):
+            # GENTOO:
+            if line.startswith("GRUB_CMDLINE_LINUX=") or line.startswith("#GRUB_CMDLINE_LINUX="):
                 return grub_cmdline
             if args.qemu_headless:
+                # GENTOO: uses the catch-all version GRUB_TERMINAL
+                # if we check here we end up with this *dangling* comment in
+                # the config file: "Uncomment to disable graphical terminal (grub-pc only)"
+                # if "GRUB_TERMINAL" in line:
+                #     return 'GRUB_TERMINAL="console serial"'
+                # see alternative approach below
+
                 if "GRUB_TERMINAL_INPUT" in line:
                     return 'GRUB_TERMINAL_INPUT="console serial"'
                 if "GRUB_TERMINAL_OUTPUT" in line:
@@ -524,6 +538,10 @@ def write_grub_config(args: CommandLineArguments, root: str) -> None:
         if args.qemu_headless:
             with open(grub_config, "a") as f:
                 f.write('GRUB_SERIAL_COMMAND="serial --unit=0 --speed 115200"\n')
+
+                # GENTOO: this is clean but fragments the code
+                if args.distribution == Distribution.gentoo:
+                    f.write('GRUB_TERMINAL="console serial"\n')
 
 
 def install_grub(args: CommandLineArguments, root: str, loopdev: str, grub: str) -> None:
