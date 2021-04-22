@@ -1089,24 +1089,23 @@ local directory:
 
 * `mkosi.default` may be used to configure mkosi's image building
   process. For example, you may configure the distribution to use
-  (`fedora`, `ubuntu`, `debian`, `arch`, `opensuse`, `mageia`, `openmandriva`) for the
-  image, or additional distribution packages to install. Note that all
-  options encoded in this configuration file may also be set on the
-  command line, and this file is hence little more than a way to make
-  sure simply typing `mkosi` without further parameters in your
-  *source* tree is enough to get the right image of your choice set
-  up.  Additionally if a `mkosi.default.d` directory exists, each file
-  in it is loaded in the same manner adding/overriding the values
-  specified in `mkosi.default`. If `mkosi.default.d` contains a
-  directory named after the distribution being built, each file in
-  that directory is also processed. The file format is inspired by
-  Windows`.ini` files and supports multi-line assignments: any line
-  with initial whitespace is considered a continuation line of the line
-  before. Command-line arguments, as shown in the help description,
-  have to be included in a configuration block (e.g.  "[Packages]")
-  corresponding to the argument group (e.g. "Packages"), and the
-  argument gets converted as follows: "--with-network" becomes
-  "WithNetwork=yes". For further details see the table above.
+  (`fedora`, `ubuntu`, `debian`, `arch`, `opensuse`, `mageia`, `openmandriva`,
+  `gentoo`) for the image, or additional distribution packages to install. Note
+  that all options encoded in this configuration file may also be set on the
+  command line, and this file is hence little more than a way to make sure
+  simply typing `mkosi` without further parameters in your *source* tree is
+  enough to get the right image of your choice set up.  Additionally if a
+  `mkosi.default.d` directory exists, each file in it is loaded in the same
+  manner adding/overriding the values specified in `mkosi.default`. If
+  `mkosi.default.d` contains a directory named after the distribution being
+  built, each file in that directory is also processed. The file format is
+  inspired by Windows`.ini` files and supports multi-line assignments: any line
+  with initial whitespace is considered a continuation line of the line before.
+  Command-line arguments, as shown in the help description, have to be included
+  in a configuration block (e.g. "[Packages]") corresponding to the argument
+  group (e.g. "Packages"), and the argument gets converted as follows:
+  "--with-network" becomes "WithNetwork=yes". For further details see the table
+  above.
 
 * `mkosi.extra/` or `mkosi.extra.tar` may be respectively a directory
   or archive. If any exist all files contained in it are copied over
