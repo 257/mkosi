@@ -86,6 +86,7 @@ class PackageType(enum.Enum):
     deb = 2
     pkg = 3
     bundle = 4
+    ebuild = 5
 
 
 class Distribution(enum.Enum):
@@ -101,6 +102,7 @@ class Distribution(enum.Enum):
     clear = 8, PackageType.bundle
     photon = 9, PackageType.rpm
     openmandriva = 10, PackageType.rpm
+    gentoo = 11, PackageType.ebuild
 
     def __new__(cls, number: int, package_type: PackageType) -> Distribution:
         # This turns the list above into enum entries with .package_type attributes.
@@ -583,9 +585,16 @@ def write_grub_config(args: CommandLineArguments, root: Path) -> None:
     else:
 
         def jj(line: str) -> str:
-            if line.startswith("GRUB_CMDLINE_LINUX="):
+            if line.startswith(("GRUB_CMDLINE_LINUX=", "#GRUB_CMDLINE_LINUX=")):  # GENTOO:
                 return grub_cmdline
             if args.qemu_headless:
+                # GENTOO: uses the catch-all version GRUB_TERMINAL
+                # if we check here we end up with this *dangling* comment in
+                # the config file: "Uncomment to disable graphical terminal (grub-pc only)"
+                # if "GRUB_TERMINAL" in line:
+                #     return 'GRUB_TERMINAL="console serial"'
+                # see alternative approach below
+
                 if "GRUB_TERMINAL_INPUT" in line:
                     return 'GRUB_TERMINAL_INPUT="console serial"'
                 if "GRUB_TERMINAL_OUTPUT" in line:
@@ -597,6 +606,10 @@ def write_grub_config(args: CommandLineArguments, root: Path) -> None:
         if args.qemu_headless:
             with open(grub_config, "a") as f:
                 f.write('GRUB_SERIAL_COMMAND="serial --unit=0 --speed 115200"\n')
+
+                # GENTOO: this is clean but fragments the code
+                if args.distribution == Distribution.gentoo:
+                    f.write('GRUB_TERMINAL="console serial"\n')
 
 
 def install_grub(args: CommandLineArguments, root: Path, loopdev: Path, grub: str) -> None:
