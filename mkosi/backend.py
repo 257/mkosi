@@ -309,7 +309,6 @@ class MkosiConfig:
     kernel_command_line_extra: list[str]
 
     # QEMU-specific options
-    qemu_headless: bool
     qemu_smp: str
     qemu_mem: str
     qemu_kvm: bool
