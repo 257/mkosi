@@ -4,7 +4,6 @@ import logging
 import multiprocessing
 import os
 import pwd
-import shlex
 import shutil
 import signal
 import subprocess
@@ -204,7 +203,7 @@ def run(
     **kwargs: Any,
 ) -> CompletedProcess:
     if ARG_DEBUG.get():
-        logging.info(f"+ {shlex.join(str(s) for s in cmdline)}")
+        logging.info(f"+ {' '.join(str(s) for s in cmdline)}")
 
     cmdline = [os.fspath(x) for x in cmdline]
 
@@ -241,7 +240,7 @@ def run(
         die(f"{cmdline[0]} not found in PATH.")
     except subprocess.CalledProcessError as e:
         if log:
-            logging.error(f'"{shlex.join(str(s) for s in cmdline)}" returned non-zero exit code {e.returncode}.')
+            logging.error(f"\"{' '.join(str(s) for s in cmdline)}\" returned non-zero exit code {e.returncode}.")
         raise e
 
 
@@ -252,7 +251,7 @@ def spawn(
     **kwargs: Any,
 ) -> Popen:
     if ARG_DEBUG.get():
-        logging.info(f"+ {shlex.join(str(s) for s in cmdline)}")
+        logging.info(f"+ {' '.join(str(s) for s in cmdline)}")
 
     if not stdout and not stderr:
         # Unless explicit redirection is done, print all subprocess
@@ -265,7 +264,7 @@ def spawn(
     except FileNotFoundError:
         die(f"{cmdline[0]} not found in PATH.")
     except subprocess.CalledProcessError as e:
-        logging.error(f'"{shlex.join(str(s) for s in cmdline)}" returned non-zero exit code {e.returncode}.')
+        logging.error(f"\"{' '.join(str(s) for s in cmdline)}\" returned non-zero exit code {e.returncode}.")
         raise e
 
 
@@ -288,9 +287,11 @@ def bwrap(
     if apivfs:
         cmdline += [
             "--tmpfs", apivfs / "run",
+            "--perms", "1777",
             "--tmpfs", apivfs / "tmp",
             "--proc", apivfs / "proc",
             "--dev", apivfs / "dev",
+            "--chmod", "1777", apivfs / "dev/shm",
             "--ro-bind", "/sys", apivfs / "sys",
         ]
 
@@ -305,25 +306,17 @@ def bwrap(
             else:
                 cmdline += ["--bind", "/dev/null", f"/etc/{f}"]
 
-    if apivfs:
-        chmod = f"chmod 1777 {apivfs / 'tmp'} {apivfs / 'var/tmp'} {apivfs / 'dev/shm'}"
-    else:
-        chmod = ":"
-
     with tempfile.TemporaryDirectory(dir="/var/tmp", prefix="mkosi-var-tmp") as var_tmp:
         if apivfs:
-            cmdline += ["--bind", var_tmp, apivfs / "var/tmp"]
-
-        cmdline += ["sh", "-c"]
-        template = f"{chmod} && exec {{}} || exit $?"
+            cmdline += ["--bind", var_tmp, apivfs / "var/tmp", "--chmod", "1777", apivfs / "var/tmp"]
 
         try:
-            return run([*cmdline, template.format(shlex.join(str(s) for s in cmd))],
+            return run([*cmdline, *cmd],
                        text=True, stdout=stdout, env=env, log=False)
         except subprocess.CalledProcessError as e:
-            logging.error(f'"{shlex.join(str(s) for s in cmd)}" returned non-zero exit code {e.returncode}.')
+            logging.error(f"\"{' '.join(str(s) for s in cmd)}\" returned non-zero exit code {e.returncode}.")
             if ARG_DEBUG_SHELL.get():
-                run([*cmdline, template.format("sh")], stdin=sys.stdin, check=False, env=env, log=False)
+                run([*cmdline, "sh"], stdin=sys.stdin, check=False, env=env, log=False)
             raise e
 
 
@@ -342,8 +335,10 @@ def run_workspace_command(
         "--unshare-cgroup",
         "--bind", root, "/",
         "--tmpfs", "/run",
+        "--perms", "1777",
         "--tmpfs", "/tmp",
         "--dev", "/dev",
+        "--chmod", "1777", "/dev/shm",
         "--proc", "/proc",
         "--ro-bind", "/sys", "/sys",
         "--die-with-parent",
@@ -374,18 +369,15 @@ def run_workspace_command(
     ) | env
 
     with tempfile.TemporaryDirectory(dir="/var/tmp", prefix="mkosi-var-tmp") as var_tmp:
-        cmdline += ["--bind", var_tmp, "/var/tmp"]
-
-        cmdline += ["sh", "-c"]
-        template = "chmod 1777 /tmp /var/tmp /dev/shm && exec {} || exit $?"
+        cmdline += ["--bind", var_tmp, "/var/tmp", "--chmod", "1777", "/var/tmp"]
 
         try:
-            return run([*cmdline, template.format(shlex.join(str(s) for s in cmd))],
+            return run([*cmdline, *cmd],
                        text=True, stdout=stdout, env=env, log=False)
         except subprocess.CalledProcessError as e:
-            logging.error(f'"{shlex.join(str(s) for s in cmd)}" returned non-zero exit code {e.returncode}.')
+            logging.error(f"\"{' '.join(str(s) for s in cmd)}\" returned non-zero exit code {e.returncode}.")
             if ARG_DEBUG_SHELL.get():
-                run([*cmdline, template.format("sh")], stdin=sys.stdin, check=False, env=env, log=False)
+                run([*cmdline, "sh"], stdin=sys.stdin, check=False, env=env, log=False)
             raise e
         finally:
             if tmp.is_symlink():
