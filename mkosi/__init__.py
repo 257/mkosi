@@ -196,6 +196,18 @@ def clean_pacman_metadata(root: Path, always: bool) -> None:
     clean_paths(root, paths, tool='/usr/bin/pacman', always=always)
 
 
+def clean_gentoo_metadata(root: Path, always: bool) -> None:
+    """Remove portage metadata if /usr/bin/emerge is not present in the image"""
+    paths = [
+        "/var/lib/portage",
+        "/var/log/portage",
+        "/var/cache/binpkgs",
+        "/var/cache/distfiles",
+        "/var/db/repos",
+    ]
+
+    clean_paths(root, paths, tool='/usr/bin/emerge', always=always)
+
 def clean_package_manager_metadata(state: MkosiState) -> None:
     """Remove package manager metadata
 
@@ -215,6 +227,8 @@ def clean_package_manager_metadata(state: MkosiState) -> None:
     clean_apt_metadata(state.root, always=always)
     clean_dpkg_metadata(state.root, always=always)
     clean_pacman_metadata(state.root, always=always)
+    clean_gentoo_metadata(state.root, always=always)
+    # FIXME: implement cleanup for other package managers: swupd
 
 
 def remove_files(state: MkosiState) -> None:
