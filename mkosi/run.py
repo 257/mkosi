@@ -300,6 +300,7 @@ def bwrap_cmd(
     *,
     root: Optional[Path] = None,
     apivfs: Optional[Path] = None,
+    options: Sequence[PathString] = (),
 ) -> Iterator[list[PathString]]:
     cmdline: list[PathString] = [
         "bwrap",
@@ -312,6 +313,8 @@ def bwrap_cmd(
     for d in ("/etc", "/opt", "/srv", "/boot", "/efi"):
         if Path(d).exists():
             cmdline += ["--ro-bind", d, d]
+
+    cmdline += [*options]
 
     if apivfs:
         if not (apivfs / "etc/machine-id").exists():
@@ -363,11 +366,12 @@ def bwrap(
     *,
     root: Optional[Path] = None,
     apivfs: Optional[Path] = None,
+    options: Sequence[PathString] = (),
     env: Mapping[str, PathString] = {},
     log: bool = True,
     **kwargs: Any,
 ) -> CompletedProcess:
-    with bwrap_cmd(root=root, apivfs=apivfs) as bwrap:
+    with bwrap_cmd(root=root, apivfs=apivfs, options=options) as bwrap:
         if root:
             # If a root is specified, we should ignore any local modifications made to PATH as any of those
             # tools might not work anymore when /usr is replaced wholesale. We also make sure that both

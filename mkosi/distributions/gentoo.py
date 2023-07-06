@@ -22,9 +22,9 @@ def invoke_emerge(
     packages: Sequence[str] = (),
     options: Sequence[str] = (),
     env: Mapping[str, str] = {},
+    apivfs: bool = True,
 ) -> None:
-    run_workspace_command(
-        state.cache_dir / "stage3",
+    bwrap(
         cmd=[
             "emerge",
             *packages,
@@ -42,22 +42,36 @@ def invoke_emerge(
             "--verbose-conflicts",
             "--changed-use",
             "--newuse",
-            "--root=/tmp/mkosi-root",
+            f"--root={state.root}",
             "--binpkg-respect-use",
             *(["--verbose", "--quiet=n", "--quiet-fail=n"] if ARG_DEBUG.get() else ["--quiet-build", "--quiet"]),
             *options,
         ],
+        root=state.cache_dir / "stage3",
+        apivfs=state.root if apivfs else None,
+        # FIXME: Eventually remove as many of these as we can.
         options=[
-            "--bind", state.root, "/tmp/mkosi-root",
+            "--bind", state.cache_dir / "stage3/usr", "/usr",
+            "--bind", state.cache_dir / "stage3/etc", "/etc",
+            "--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf",
+            "--bind", state.cache_dir / "stage3/var", "/var",
             "--bind", state.cache_dir / "binpkgs", "/var/cache/binpkgs",
             "--bind", state.cache_dir / "distfiles", "/var/cache/distfiles",
             "--bind", state.cache_dir / "repos", "/var/db/repos",
+            # Gentoo tries to chown files in /dev/pts which fails with permission errors if we use /dev from
+            # the host so give emerge it's own /dev.
+            "--dev", "/dev",
         ],
-        network=True,
         env=dict(
             FEATURES=" ".join([
                 "getbinpkg",
                 "-candy",
+                # Disable sandboxing in emerge because we already do it in mkosi.
+                "-sandbox",
+                "-userfetch",
+                "-userpriv",
+                "-usersandbox",
+                "-usersync",
                 "parallel-install",
                 *(["noman", "nodoc", "noinfo"] if state.config.with_docs else []),
             ]),
@@ -148,11 +162,11 @@ class GentooInstaller(DistributionInstaller):
             network=True,
         )
 
-        invoke_emerge(state, packages=["sys-apps/baselayout"], env={"USE": "build"})
+        invoke_emerge(state, packages=["sys-apps/baselayout"], env={"USE": "build"}, apivfs=False)
 
     @classmethod
-    def install_packages(cls, state: MkosiState, packages: Sequence[str]) -> None:
-        invoke_emerge(state, options=["--noreplace"], packages=packages)
+    def install_packages(cls, state: MkosiState, packages: Sequence[str], apivfs: bool = True) -> None:
+        invoke_emerge(state, options=["--noreplace"], packages=packages, apivfs=apivfs)
 
     @staticmethod
     def architecture(arch: Architecture) -> str:
