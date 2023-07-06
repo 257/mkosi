@@ -390,7 +390,7 @@ def bwrap(
 def run_workspace_command(
     root: Path,
     cmd: Sequence[PathString],
-    bwrap_params: Sequence[PathString] = (),
+    options: Sequence[PathString] = (),
     network: bool = False,
     stdout: _FILE = None,
     env: Mapping[str, PathString] = {},
@@ -409,7 +409,7 @@ def run_workspace_command(
         "--proc", "/proc",
         "--ro-bind", "/sys", "/sys",
         "--die-with-parent",
-        *bwrap_params,
+        *options,
     ]
 
     resolve = root.joinpath("etc/resolv.conf")

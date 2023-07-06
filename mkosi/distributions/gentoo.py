@@ -47,7 +47,7 @@ def invoke_emerge(
             *(["--verbose", "--quiet=n", "--quiet-fail=n"] if ARG_DEBUG.get() else ["--quiet-build", "--quiet"]),
             *options,
         ],
-        bwrap_params=[
+        options=[
             "--bind", state.root, "/tmp/mkosi-root",
             "--bind", state.cache_dir / "binpkgs", "/var/cache/binpkgs",
             "--bind", state.cache_dir / "distfiles", "/var/cache/distfiles",
@@ -144,7 +144,7 @@ class GentooInstaller(DistributionInstaller):
         run_workspace_command(
             stage3,
             cmd=["emerge-webrsync"],
-            bwrap_params=["--bind", state.cache_dir / "repos", "/var/db/repos"],
+            options=["--bind", state.cache_dir / "repos", "/var/db/repos"],
             network=True,
         )
 
