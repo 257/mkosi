@@ -19,6 +19,7 @@ class PackageType(StrEnum):
     rpm = enum.auto()
     deb = enum.auto()
     pkg = enum.auto()
+    ebuild = enum.auto()
 
 
 class DistributionInstaller:
@@ -83,6 +84,7 @@ class Distribution(StrEnum):
     openmandriva = enum.auto()
     rocky = enum.auto()
     alma = enum.auto()
+    gentoo = enum.auto()
     azure = enum.auto()
     custom = enum.auto()
 
