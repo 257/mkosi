@@ -119,6 +119,7 @@ def sandbox_cmd(
     devices: bool = False,
     scripts: Optional[Path] = None,
     tools: Path = Path("/"),
+    tools_isro: bool = True, # gentoo is the only user for this
     relaxed: bool = False,
     mounts: Sequence[Mount] = (),
     options: Sequence[PathString] = (),
@@ -148,7 +149,10 @@ def sandbox_cmd(
         # We mounted a subdirectory of TMPDIR to /var/tmp so we unset TMPDIR so that /tmp or /var/tmp are used instead.
         "--unsetenv", "TMPDIR",
     ]
-    mounts += [Mount(tools / "usr", "/usr", ro=True)]
+    # gentoo cat be configured to install build-time dependancies into stage3
+    # and not bloat the final image. therefore we want stage3's /usr to be
+    # writeable.
+    mounts += [Mount(tools / "usr", "/usr", ro=tools_isro)]
 
     if relaxed:
         mounts += [Mount("/tmp", "/tmp")]

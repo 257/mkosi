@@ -56,6 +56,7 @@ def extract_tar(
     *,
     log: bool = True,
     sandbox: SandboxProtocol = nosandbox,
+    compressed: bool = False,
 ) -> None:
     if log:
         log_step(f"Extracting tar archive {src}…")
@@ -79,6 +80,7 @@ def extract_tar(
                 "--selinux",
                 "--xattrs",
                 "--force-local",
+                "--xz" if compressed else "",
                 *tar_exclude_apivfs_tmp(),
             ],
             stdin=f,

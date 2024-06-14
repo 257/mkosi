@@ -51,7 +51,9 @@ def test_format(config: Image.Config, format: OutputFormat) -> None:
             args = ["systemd.mask=systemd-resolved.service"] if format == OutputFormat.directory else []
             image.boot(options=options, args=args)
 
-        if format in (OutputFormat.cpio, OutputFormat.uki, OutputFormat.esp):
+
+        if (image.config.distribution != Distribution.gentoo and format in
+                (OutputFormat.cpio, OutputFormat.uki, OutputFormat.esp)):
             pytest.skip("Default image is too large to be able to boot in CPIO/UKI/ESP format")
 
         if image.config.distribution == Distribution.rhel_ubi:

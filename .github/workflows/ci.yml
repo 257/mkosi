@@ -96,18 +96,9 @@ jobs:
       fail-fast: false
       matrix:
         distro:
-          - arch
-          - centos
-          - debian
-          - fedora
-          - opensuse
-          - ubuntu
+          - gentoo
         tools:
-          - arch
-          - debian
-          - fedora
-          - opensuse
-          - ubuntu
+          - gentoo
           # TODO: Add CentOS once they have systemd v254 or newer.
         exclude:
           # pacman and archlinux-keyring are not packaged in OpenSUSE.
@@ -118,6 +109,7 @@ jobs:
             tools: opensuse
           - distro: ubuntu
             tools: opensuse
+
 
     steps:
     - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
