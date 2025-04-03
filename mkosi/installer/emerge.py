@@ -96,6 +96,11 @@ class Emerge(PackageManager):
             "--bind", cls.stage3 / "var/db/pkg", "/var/db/pkg",
             "--bind", context.sandbox_tree / "etc/portage", cls.installroot / "etc/portage",
             "--bind", cls.stage3 / "etc/portage", "/etc/portage",
+
+            # sys-libs/pam expects this; stuff from app-text/docbook-xsl-ns-stylesheets?
+            # TODO: play with docbook-rng to see if we can avoid this
+            "--ro-bind", cls.stage3 / "etc/xml", "/etc/xml",
+
             "--ro-bind", context.sandbox_tree / "etc/portage/package.accept_keywords", "/etc/portage/package.accept_keywords",
             "--ro-bind", context.sandbox_tree / "etc/portage/package.use", "/etc/portage/package.use",
             "--ro-bind", context.sandbox_tree / "etc/portage/package.mask", "/etc/portage/package.mask",
