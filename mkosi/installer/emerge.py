@@ -82,10 +82,13 @@ class Emerge(PackageManager):
         mounts = [
             *super().mounts(context),
             # TODO: move it to finalize_passwd_symlinks()
-            "--ro-bind", cls.stage3 / "etc/shadow", "/etc/shadow",
-            "--ro-bind", cls.stage3 / "etc/gshadow", "/etc/gshadow",
-            "--ro-bind", cls.stage3 / "etc/passwd", "/etc/passwd",
-            "--ro-bind", cls.stage3 / "etc/group", "/etc/group",
+            # bind (as opposed to ro-bind) because build dependencies are actually
+            # merged into stage3 and if they need a user/group then they need to write
+            # into these
+            "--bind", cls.stage3 / "etc/shadow", "/etc/shadow",
+            "--bind", cls.stage3 / "etc/gshadow", "/etc/gshadow",
+            "--bind", cls.stage3 / "etc/passwd", "/etc/passwd",
+            "--bind", cls.stage3 / "etc/group", "/etc/group",
 
             "--bind", cls.stage3 / "var/cache/edb", "/var/cache/edb",
             "--bind", cls.stage3 / "var/lib/portage", "/var/lib/portage",
