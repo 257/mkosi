@@ -20,7 +20,6 @@ from mkosi.run import (
     finalize_passwd_symlinks,
     find_binary,
     run,
-    sandbox_cmd,
     workdir,
 )
 from mkosi.tree import copy_tree, rmtree
@@ -81,6 +80,8 @@ class Emerge(PackageManager):
     def mounts(cls, context: Context) -> list[PathString]:
         mounts = [
             *super().mounts(context),
+            "--bind", cls.stage3 / "usr", "/usr",
+
             # TODO: move it to finalize_passwd_symlinks()
             # bind (as opposed to ro-bind) because build dependencies are actually
             # merged into stage3 and if they need a user/group then they need to write
@@ -234,10 +235,9 @@ class Emerge(PackageManager):
         apivfs: bool,
         options: Sequence[PathString] = (),
     ) -> AbstractContextManager[list[PathString]]:
-        return sandbox_cmd(
+        return context.sandbox(
             network=True,
             devices=True,
-            tools=cls.stage3,
             options=[
                 *context.rootoptions(cls.installroot),
                 *cls.mounts(context),
