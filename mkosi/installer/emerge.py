@@ -13,7 +13,7 @@ from mkosi.config import Config
 from mkosi.context import Context
 from mkosi.distributions import join_mirror
 from mkosi.installer import PackageManager
-from mkosi.log import ARG_DEBUG, complete_step, die, log_notice
+from mkosi.log import ARG_DEBUG, complete_step, die
 from mkosi.run import (
     CompletedProcess,
     apivfs_options,
@@ -80,7 +80,11 @@ class Emerge(PackageManager):
     def mounts(cls, context: Context) -> list[PathString]:
         mounts = [
             *super().mounts(context),
+            # need it for things like rust-bin
+            "--bind", cls.stage3 / "opt", "/opt",
             "--bind", cls.stage3 / "usr", "/usr",
+            # need this so later overlayfs works; otherwise we get Readonly fs error
+            "--bind", cls.stage3 / "etc", "/etc",
 
             # TODO: move it to finalize_passwd_symlinks()
             # bind (as opposed to ro-bind) because build dependencies are actually
@@ -94,34 +98,35 @@ class Emerge(PackageManager):
             "--bind", cls.stage3 / "var/cache/edb", "/var/cache/edb",
             "--bind", cls.stage3 / "var/lib/portage", "/var/lib/portage",
             "--bind", cls.stage3 / "var/db/pkg", "/var/db/pkg",
-            "--bind", context.sandbox_tree / "etc/portage", cls.installroot / "etc/portage",
-            "--bind", cls.stage3 / "etc/portage", "/etc/portage",
+        ]  # fmt: skip
+        if context.config.package_cache_dir is not None:
+            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/binpkgs"), "/var/cache/binpkgs"]
+            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/distfiles"), "/var/cache/distfiles"]
+            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), "/var/db/repos"]
+            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), cls.installroot / "var/db/repos"]
+
+        if (context.sandbox_tree / "stage3/etc/portage").exists():
+            mounts += ["--overlay-lowerdir", context.sandbox_tree / "stage3/etc/portage"]
+        else:
+            mounts += ["--overlay-lowerdir", cls.stage3 / "etc/portage"]
+
+        mounts += [
+            "--overlay-upperdir", "tmpfs",
+            "--overlay", "/etc/portage"
+        ]
+
+        if (context.sandbox_tree / "installroot/etc/portage").exists():
+            mounts += ["--bind", context.sandbox_tree / "installroot/etc/portage", cls.installroot / "etc/portage"]
+            # TODO:
+            # "--ro-bind", context.keyring_dir, "/etc/portage/gnupg",
 
             # sys-libs/pam expects this; stuff from app-text/docbook-xsl-ns-stylesheets?
             # TODO: play with docbook-rng to see if we can avoid this
-            "--ro-bind", cls.stage3 / "etc/xml", "/etc/xml",
+            # "--ro-bind", cls.stage3 / "etc/xml", cls.installroot / "etc/xml",
+            # "--symlink", cls.installroot / "etc/xml", "/etc/xml",
 
-            "--ro-bind", context.sandbox_tree / "etc/portage/package.accept_keywords", "/etc/portage/package.accept_keywords",
-            "--ro-bind", context.sandbox_tree / "etc/portage/package.use", "/etc/portage/package.use",
-            "--ro-bind", context.sandbox_tree / "etc/portage/package.mask", "/etc/portage/package.mask",
-            # "--tmpfs", "/var/tmp/portage",
-            # "--overlay-lowerdir", cls.stage3 / "etc/portage", "/etc/portage",
-            # "--overlay-lowerdir", context.sandbox_tree / "etc/portage", "/etc/portage",
-            # "--overlay-upperdir", "tmpfs",
-            # "--overlay", "/etc/portage",
-            # /etc/portage/make.profile is not a symlink and will probably prevent most merges.
-            "--symlink", (cls.stage3 / "etc/portage/make.profile").readlink(), cls.installroot / "etc/portage/make.profile",
-
-            # TODO:
-            # "--ro-bind", context.keyring_dir, "/etc/portage/gnupg",
-            "--ro-bind", context.sandbox_tree / "etc/portage/gnupg", "/etc/portage/gnupg",
-
-        ]  # fmt: skip
-        if context.config.package_cache_dir is not None:
-            mounts += ["--bind", (context.config.package_cache_dir / "cache/binpkgs"), "/var/cache/binpkgs"]
-            mounts += ["--bind", (context.config.package_cache_dir / "cache/distfiles"), "/var/cache/distfiles"]
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "db/repos"), "/var/db/repos"]
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "db/repos"), cls.installroot / "var/db/repos"]
+        # /etc/portage/make.profile is not a symlink and will probably prevent most merges.
+        mounts += ["--symlink", (cls.stage3 / "etc/portage/make.profile").readlink(), cls.installroot / "etc/portage/make.profile"]
 
         return mounts
 
@@ -161,7 +166,6 @@ class Emerge(PackageManager):
             ):
                 for i in stage3_cache_dir.iterdir():
                     if i.is_dir() and i != output_dir:
-                        log_notice(f"found older stage3 {i.name}, removing...")
                         rmtree(i)
 
                 output_dir.mkdir(parents=True, exist_ok=True)
