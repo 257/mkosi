@@ -27,6 +27,9 @@ from mkosi.util import _FILE, PathString
 
 
 class Emerge(PackageManager):
+    stage3: Path
+    installroot: Path
+
     @classmethod
     def executable(cls, config: Config) -> str:
         # Allow the user to override autodetection with an environment variable
