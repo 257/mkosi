@@ -36,8 +36,9 @@ class Emerge(PackageManager):
         emerge = config.environment.get("MKOSI_EMERGE")
         root = config.tools()
 
-        return Path(emerge or find_binary("emerge", root=root) or
-                    find_binary("emerge", root=root) or "emerge").name
+        return Path(
+            emerge or find_binary("emerge", root=root) or find_binary("emerge", root=root) or "emerge"
+        ).name
 
     @classmethod
     def subdir(cls, config: Config) -> Path:
@@ -77,7 +78,7 @@ class Emerge(PackageManager):
             "--setenv", "GPG_VERIFY_USER_DROP", "root",
             "--setenv", "GPG_VERIFY_GROUP_DROP", "root",
             "--setenv", "FEATURES", cls.features(context.config)
-        ]
+        ]  # fmt: skip
 
     @classmethod
     def mounts(cls, context: Context) -> list[PathString]:
@@ -103,33 +104,30 @@ class Emerge(PackageManager):
             "--bind", cls.stage3 / "var/db/pkg", "/var/db/pkg",
         ]  # fmt: skip
         if context.config.package_cache_dir is not None:
-            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/binpkgs"), "/var/cache/binpkgs"]
-            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/distfiles"), "/var/cache/distfiles"]
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), "/var/db/repos"]
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), cls.installroot / "var/db/repos"]
+            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/binpkgs"), "/var/cache/binpkgs"]  # fmt: skip
+            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/distfiles"), "/var/cache/distfiles"]  # fmt: skip
+            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), "/var/db/repos"]  # fmt: skip
+            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), cls.installroot / "var/db/repos"]  # fmt: skip
 
         if (context.sandbox_tree / "stage3/etc/portage").exists():
             mounts += ["--overlay-lowerdir", context.sandbox_tree / "stage3/etc/portage"]
         else:
             mounts += ["--overlay-lowerdir", cls.stage3 / "etc/portage"]
 
-        mounts += [
-            "--overlay-upperdir", "tmpfs",
-            "--overlay", "/etc/portage"
-        ]
+        mounts += ["--overlay-upperdir", "tmpfs", "--overlay", "/etc/portage"]
 
         if (context.sandbox_tree / "installroot/etc/portage").exists():
-            mounts += ["--bind", context.sandbox_tree / "installroot/etc/portage", cls.installroot / "etc/portage"]
-            # TODO:
-            # "--ro-bind", context.keyring_dir, "/etc/portage/gnupg",
+            mounts += ["--bind", context.sandbox_tree / "installroot/etc/portage", cls.installroot / "etc/portage"]  # fmt: skip
+        # TODO:
+        # "--ro-bind", context.keyring_dir, "/etc/portage/gnupg",
 
-            # sys-libs/pam expects this; stuff from app-text/docbook-xsl-ns-stylesheets?
-            # TODO: play with docbook-rng to see if we can avoid this
-            # "--ro-bind", cls.stage3 / "etc/xml", cls.installroot / "etc/xml",
-            # "--symlink", cls.installroot / "etc/xml", "/etc/xml",
+        # sys-libs/pam expects this; stuff from app-text/docbook-xsl-ns-stylesheets?
+        # TODO: play with docbook-rng to see if we can avoid this
+        # "--ro-bind", cls.stage3 / "etc/xml", cls.installroot / "etc/xml",
+        # "--symlink", cls.installroot / "etc/xml", "/etc/xml",
 
         # /etc/portage/make.profile is not a symlink and will probably prevent most merges.
-        mounts += ["--symlink", (cls.stage3 / "etc/portage/make.profile").readlink(), cls.installroot / "etc/portage/make.profile"]
+        mounts += ["--symlink", (cls.stage3 / "etc/portage/make.profile").readlink(), cls.installroot / "etc/portage/make.profile"]  # fmt: skip
 
         return mounts
 
@@ -149,7 +147,7 @@ class Emerge(PackageManager):
             regexp = rf"^[0-9]+T[0-9]+Z/stage3-{arch}-nomultilib-systemd-[0-9]+T[0-9]+Z\.tar\.xz"
             all_lines = r.readlines()
             for line in all_lines:
-                if (m := re.match(regexp, line.decode("utf-8"))):
+                if m := re.match(regexp, line.decode("utf-8")):
                     stage3_latest = Path(m.group(0))
                     break
             else:
@@ -164,9 +162,7 @@ class Emerge(PackageManager):
 
         if not (stage3_cache_dir / current).exists():
             output_dir = stage3_cache_dir / current.parent
-            with complete_step(
-                f"Fetching the latest stage3 snapshot into {stage3_cache_dir / current}"
-            ):
+            with complete_step(f"Fetching the latest stage3 snapshot into {stage3_cache_dir / current}"):
                 for i in stage3_cache_dir.iterdir():
                     if i.is_dir() and i != output_dir:
                         rmtree(i)
@@ -177,16 +173,17 @@ class Emerge(PackageManager):
                         "curl",
                         "--location",
                         "--progress-bar",
-                        "--output-dir", output_dir,
+                        "--output-dir",
+                        output_dir,
                         "--remote-name",
                         "--fail",
-                        stage3_url
+                        stage3_url,
                     ],
                     sandbox=context.config.sandbox(
                         network=True,
                         relaxed=True,
-                        options=["--bind", stage3_cache_dir, workdir(stage3_cache_dir)]
-                    )
+                        options=["--bind", stage3_cache_dir, workdir(stage3_cache_dir)],
+                    ),
                 )
 
         cls.stage3 = stage3_cache_dir / "root"
@@ -203,20 +200,22 @@ class Emerge(PackageManager):
 
     @classmethod
     def features(cls, config: Config) -> str:
-        return ' '.join([
+        return " ".join(
+            [
                 # Disable sandboxing in emerge because we already do it in mkosi.
-                '-sandbox',
-                '-pid-sandbox',
-                '-ipc-sandbox',
-                '-network-sandbox',
-                '-news',
-                '-userfetch',
-                '-userpriv',
-                '-usersandbox',
-                '-usersync',
-                'parallel-install',
-                *(['noman', 'nodoc', 'noinfo'] if config.with_docs else []),
-            ])
+                "-sandbox",
+                "-pid-sandbox",
+                "-ipc-sandbox",
+                "-network-sandbox",
+                "-news",
+                "-userfetch",
+                "-userpriv",
+                "-usersandbox",
+                "-usersync",
+                "parallel-install",
+                *(["noman", "nodoc", "noinfo"] if config.with_docs else []),
+            ]
+        )
 
     @classmethod
     def cmd(cls, context: Context) -> list[PathString]:
@@ -234,9 +233,8 @@ class Emerge(PackageManager):
             "--noreplace",
             "--update",
             "--newuse",
-            *(["--verbose", "--quiet-fail=n"] if ARG_DEBUG.get()
-              else ["--quiet-build", "--quiet"]),
-            f"--root={cls.installroot}"
+            *(["--verbose", "--quiet-fail=n"] if ARG_DEBUG.get() else ["--quiet-build", "--quiet"]),
+            f"--root={cls.installroot}",
         ]
 
     @classmethod
@@ -278,10 +276,7 @@ class Emerge(PackageManager):
                 stdout=stdout,
             )
         return run(
-            cls.cmd(context) + [
-                *(options if options is not None else []),
-                *arguments
-            ],
+            cls.cmd(context) + [*(options if options is not None else []), *arguments],
             sandbox=cls.sandbox(context, apivfs=apivfs),
             env=context.config.environment,
             stdout=stdout,
@@ -289,16 +284,21 @@ class Emerge(PackageManager):
 
     @classmethod
     def sync(cls, context: Context, force: bool) -> None:
-
-        if force or (not ((cls.stage3 / "var/db/repos/gentoo").exists() and
-                          any((cls.stage3 / "var/db/repos/gentoo").iterdir()))):
-            logging.info(textwrap.dedent("""
+        if force or (
+            not (
+                (cls.stage3 / "var/db/repos/gentoo").exists()
+                and any((cls.stage3 / "var/db/repos/gentoo").iterdir())
+            )
+        ):
+            logging.info(
+                textwrap.dedent("""
                 you probably don't have any repos enabled including the default gentoo repos
                 and you have probably passed `-ff`!
                 we don't use emerge-websync either because to allow users use repos with
                 sync-type=git
                 petition the upstream to ship git with stage3
-            """))
+            """)
+            )
             # run(
             #     ["emerge-webrsync", "--verbose"],
             #     sandbox=cls.sandbox(context, apivfs=False),
@@ -312,13 +312,12 @@ class Emerge(PackageManager):
             [cls.executable(context.config), "--sync"],
             check=False,
             sandbox=cls.sandbox(context, apivfs=False),
-            env={'HOME': '/var/lib/portage/home'}
+            env={"HOME": "/var/lib/portage/home"},
         )
-
 
     @classmethod
     def createrepo(cls, context: Context) -> None:
-        cls.sync(context, True if context.args.force==2 else False)
+        cls.sync(context, True if context.args.force == 2 else False)
 
     @classmethod
     def install(
