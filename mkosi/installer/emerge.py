@@ -294,8 +294,7 @@ class Emerge(PackageManager):
                 textwrap.dedent("""
                 you probably don't have any repos enabled including the default gentoo repos
                 and you have probably passed `-ff`!
-                we don't use emerge-websync either because to allow users use repos with
-                sync-type=git
+                we don't use emerge-websync either in order to allow users to use repos with sync-type=git
                 petition the upstream to ship git with stage3
             """)
             )
