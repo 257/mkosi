@@ -179,9 +179,9 @@ class Emerge(PackageManager):
                         "--fail",
                         stage3_url,
                     ],
-                    sandbox=context.config.sandbox(
-                        network=True,
-                        relaxed=True,
+                    sandbox=cls.sandbox(
+                        context,
+                        apivfs=False,
                         options=["--bind", stage3_cache_dir, workdir(stage3_cache_dir)],
                     ),
                 )
