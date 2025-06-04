@@ -9,6 +9,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 from mkosi.archive import extract_tar
+from mkosi.curl import curl
 from mkosi.config import Config
 from mkosi.context import Context
 from mkosi.distributions import join_mirror
@@ -168,22 +169,10 @@ class Emerge(PackageManager):
                         rmtree(i)
 
                 output_dir.mkdir(parents=True, exist_ok=True)
-                run(
-                    [
-                        "curl",
-                        "--location",
-                        "--progress-bar",
-                        "--output-dir",
-                        output_dir,
-                        "--remote-name",
-                        "--fail",
-                        stage3_url,
-                    ],
-                    sandbox=cls.sandbox(
-                        context,
-                        apivfs=False,
-                        options=["--bind", stage3_cache_dir, workdir(stage3_cache_dir)],
-                    ),
+                curl(
+                    context.config,
+                    stage3_url,
+                    output_dir,
                 )
 
         cls.stage3 = stage3_cache_dir / "root"
