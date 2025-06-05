@@ -318,11 +318,11 @@ class Emerge(PackageManager):
         cls.invoke(context, cls.installroot, (), packages, apivfs=apivfs)
 
     @classmethod
-        def remove(
-            cls,
-            context: Context,
-            packages: Sequence[str],
-            *,
-            apivfs: bool = True,
-        ) -> None:
-            cls.invoke(context, cls.installroot, arguments=list(packages), options=["--unmerge"], apivfs=True)
+    def remove(
+        cls,
+        context: Context,
+        packages: Sequence[str],
+        *,
+        apivfs: bool = True,
+    ) -> None:
+        cls.invoke(context, cls.installroot, arguments=list(packages), options=["--unmerge"], apivfs=True)
