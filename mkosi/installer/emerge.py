@@ -9,9 +9,9 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 from mkosi.archive import extract_tar
-from mkosi.curl import curl
 from mkosi.config import Config
 from mkosi.context import Context
+from mkosi.curl import curl
 from mkosi.distributions import join_mirror
 from mkosi.installer import PackageManager
 from mkosi.log import ARG_DEBUG, complete_step, die
