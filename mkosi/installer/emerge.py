@@ -49,10 +49,6 @@ class Emerge(PackageManager):
             "--become-root",
             "--suppress-chown",
             "--suppress-sync",
-            # Make sure /etc/machine-id is not overwritten by any package manager post install scripts.
-            # "--ro-bind-try", Path(root) / "etc/machine-id", f"/{root}/etc/machine-id",
-            # Nudge gpg to create its sockets in /run by making sure /run/user/0 exists.
-            "--dir", "/run/user/0",
         ]  # fmt: skip
 
     @classmethod
@@ -191,7 +187,7 @@ class Emerge(PackageManager):
             options=[
                 *context.rootoptions(cls.installroot),
                 *cls.mounts(context),
-                *cls.options(root=context.config.tools(), apivfs=False),
+                *cls.options(root=context.config.tools(), apivfs=apivfs),
                 *cls.setenv(context, cls.installroot),
                 *options,
             ],
