@@ -141,8 +141,11 @@ class Emerge(PackageManager):
                 "-usersandbox",
                 "-usersync",
                 "-collision-protect", # https://wiki.gentoo.org/wiki/Project:Base/Alternatives
-                "protect-owned",
+                "-ebuild-locks",
+                "-merge-wait",
                 "parallel-install",
+                "parallel-fetch",
+                "protect-owned",
                 *(["noman", "nodoc", "noinfo"] if config.with_docs else []),
             ]
         )
