@@ -5,13 +5,13 @@ from collections.abc import Sequence
 
 from mkosi.config import Architecture, Config
 from mkosi.context import Context
-from mkosi.distributions import Distribution, DistributionInstaller, PackageType
+from mkosi.distribution import Distribution, DistributionInstaller, PackageType
 from mkosi.installer import PackageManager
 from mkosi.installer.emerge import Emerge
 from mkosi.log import die
 
 
-class Installer(DistributionInstaller):
+class Installer(DistributionInstaller, distribution=Distribution.gentoo):
     @classmethod
     def pretty_name(cls) -> str:
         return "Gentoo"

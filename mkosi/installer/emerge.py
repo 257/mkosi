@@ -19,12 +19,11 @@ class Emerge(PackageManager):
 
     @classmethod
     def executable(cls, config: Config) -> str:
-        # Allow the user to override autodetection with an environment variable
-        emerge = config.environment.get("MKOSI_EMERGE")
-        root = config.tools()
-
         return Path(
-            emerge or find_binary("emerge", root=root) or find_binary("emerge", root=root) or "emerge"
+            config.environment.get("MKOSI_EMERGE") or
+            find_binary("emerge", root=config.tools()) or
+            find_binary("emerge") or
+            "emerge"
         ).name
 
     @classmethod
@@ -62,58 +61,77 @@ class Emerge(PackageManager):
 
     @classmethod
     def mounts(cls, context: Context) -> list[PathString]:
-        mounts = [
-            *super().mounts(context),
-            # need it for things like rust-bin
-            "--bind", context.config.tools() / "opt", "/opt",
+        mounts = []
+        if context.config.tools() is not None:
+            mounts += [
+                "--bind", context.config.tools() / "etc/dispatch-conf.conf", "/etc/dispatch-conf.conf",
+                "--bind", context.config.tools() / "etc/env.d", "/etc/env.d",
+                "--bind", context.config.tools() / "etc/shadow", "/etc/shadow",
+                "--bind", context.config.tools() / "etc/gshadow", "/etc/gshadow",
+                "--bind", context.config.tools() / "etc/passwd", "/etc/passwd",
+                "--bind", context.config.tools() / "etc/group", "/etc/group",
+                "--bind", context.config.tools() / "etc/ssl", "/etc/ssl",
 
-            # TODO: move it to finalize_passwd_symlinks()
-            # bind (as opposed to ro-bind) because build dependencies are actually
-            # merged into stage3 and if they need a user/group then they need to write
-            # into these
-            "--bind", context.config.tools() / "etc/shadow", "/etc/shadow",
-            "--bind", context.config.tools() / "etc/gshadow", "/etc/gshadow",
-            "--bind", context.config.tools() / "etc/passwd", "/etc/passwd",
-            "--bind", context.config.tools() / "etc/passwd-", "/etc/passwd-",
-            "--bind", context.config.tools() / "etc/group", "/etc/group",
-            "--bind", context.config.tools() / "etc/group-", "/etc/group-",
+                "--bind", context.config.tools() / "var/cache/edb", "/var/cache/edb",
+                "--bind", context.config.tools() / "var/cache/ldconfig", "/var/cache/ldconfig",
+                "--bind", context.config.tools() / "var/cache/repos", "/var/cache/repos",
 
-            "--bind", context.config.tools() / "var", "/var",
-            "--bind", context.config.tools() / "var/lib", "/var/lib",
-            "--bind", context.config.tools() / "var/lib/portage", "/var/lib/portage",
+                "--bind", context.config.tools() / "var/db/pkg", "/var/db/pkg",
+                "--bind", context.config.tools() / "var/db/repos", "/var/db/repos",
 
-            "--bind", context.config.tools() / "var/db", "/var/db",
-            "--bind", context.config.tools() / "var/db/pkg", "/var/db/pkg",
-            "--bind", context.config.tools() / "var/cache", "/var/cache",
-            "--bind", context.config.tools() / "var/cache/edb", "/var/cache/edb",
-        ]  # fmt: skip
-        if context.config.package_cache_dir is not None:
-            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/binpkgs"), "/var/cache/binpkgs"]  # fmt: skip
-            mounts += ["--bind", (context.config.package_cache_dir / "var/cache/distfiles"), "/var/cache/distfiles"]  # fmt: skip
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), "/var/db/repos"]  # fmt: skip
-            mounts += ["--ro-bind", (context.config.package_cache_dir / "var/db/repos"), cls.installroot / "var/db/repos"]  # fmt: skip
+                "--bind", context.config.tools() / "var/lib/portage", "/var/lib/portage",
 
-        if (context.sandbox_tree / "stage3/etc/portage").exists():
-            mounts += ["--overlay-lowerdir", context.sandbox_tree / "stage3/etc/portage"]
+                "--bind", context.config.tools() / "var/log/emerge.log", "/var/log/emerge.log",
+
+                "--bind", context.config.tools() / "opt", "/opt",
+            ]
         else:
-            mounts += ["--overlay-lowerdir", context.config.tools() / "etc/portage"]
+            # super calls finalize_passwd_symlinks() but ro-binds )
+            # some build dependencies, however, need to write to user/group database
+            # final image, installroot, is not affected by this
+            mounts += [ *super().mounts(context) ]
 
-        mounts += ["--overlay-upperdir", "tmpfs", "--overlay", "/etc/portage"]
+        if context.config.package_cache_dir is not None:
+            # TODO: try not to mix our binaries with host's
+            binpkgs_dir = context.config.package_cache_dir / "binpkgs"
+            if not binpkgs_dir.exists():
+                binpkgs_dir.mkdir(parents=True, exist_ok=True)
+            mounts += ["--bind", binpkgs_dir, "/var/cache/binpkgs"]
+            # repo clones can be expensive, symlink to users existing repos
+            repos_dir = context.config.package_cache_dir / "var/db/repos"
+            if not repos_dir.exists():
+                repos_dir.mkdir(parents=True, exist_ok=True)
+            mounts += ["--bind", repos_dir, "/var/db/repos"]
+            # `emerge(1)` expects a valid cls.installroot / etc/portage/make.profile
+            mounts += ["--ro-bind", repos_dir, cls.installroot / "var/db/repos"]
 
-        mounts += ["--bind", context.sandbox_tree / "installroot/etc/portage", cls.installroot / "etc/portage"]  # fmt: skip
-        # TODO:
-        # "--ro-bind", context.keyring_dir, "/etc/portage/gnupg",
+        CONFIG_ROOT = Path("etc/portage")
+        # do your customisation under `StandboxTree=`
+        if context.sandbox_tree is not None:
+            installroot = (context.sandbox_tree / "installroot")
+            mounts += [*(["--bind", installroot, cls.installroot] if installroot.exists() else [])]
 
-        # sys-libs/pam expects this; stuff from app-text/docbook-xsl-ns-stylesheets?
-        # TODO: play with docbook-rng to see if we can avoid this
-        # "--ro-bind", context.config.tools() / "etc/xml", cls.installroot / "etc/xml",
-        # "--symlink", cls.installroot / "etc/xml", "/etc/xml",
+            stage3_portage_config = context.sandbox_tree / "stage3" / CONFIG_ROOT
+            if stage3_portage_config.exists():
+                mounts += ["--bind", stage3_portage_config, "/" / CONFIG_ROOT]
 
-        # /etc/portage/make.profile is not a symlink and will probably prevent most merges.
-        mounts += ["--symlink", (context.config.tools() / "etc/portage/make.profile").readlink(), cls.installroot / "etc/portage/make.profile"]  # fmt: skip
+            # local overlay repos, could be a symlink
+            local_repo = context.sandbox_tree / "repos"
+            if local_repo.exists():
+                for d in local_repo.iterdir():
+                    mounts += ["--bind", d , f"/var/db/repos/{d.stem}"]
 
+        elif context.config.tools() is not None:
+            mounts += ["--bind", context.config.tools() / CONFIG_ROOT, "/" / CONFIG_ROOT]
+        elif ("/" / CONFIG_ROOT).exists():
+            mounts += ["--bind", "/" / CONFIG_ROOT, "/" / CONFIG_ROOT]
+
+        # TODO: on, at least some, non-gentoo distros kernel src tree might be at /usr/src/kernel
         (cls.installroot / "usr/src/linux").mkdir(parents=True, exist_ok=True)
-        mounts += ["--ro-bind", "/usr/src/linux", cls.installroot / "usr/src/linux"]  # fmt: skip
+        mounts += ["--ro-bind", "/usr/src/linux", cls.installroot / "usr/src/linux"]
+        mounts += ["--ro-bind", "/usr/src/linux", "/usr/src/linux"]
+
+        mounts += [ "--tmpfs", "/var/tmp/portage" ]
 
         return mounts
 
@@ -124,49 +142,12 @@ class Emerge(PackageManager):
 
     @classmethod
     def features(cls, config: Config) -> str:
-        return " ".join(
-            [
-                # Disable sandboxing in emerge because we already do it in mkosi.
-                "-sandbox",
-                "-pid-sandbox",
-                "-ipc-sandbox",
-                "-network-sandbox",
-                "-news",
-                "-userfetch",
-                "-userpriv",
-                "-usersandbox",
-                "-usersync",
-                "-collision-protect", # https://wiki.gentoo.org/wiki/Project:Base/Alternatives
-                "-ebuild-locks",
-                "-merge-wait",
-                "parallel-install",
-                "parallel-fetch",
-                "protect-owned",
-                *(["noman", "nodoc", "noinfo"] if config.with_docs else []),
-            ]
-        )
+        return " ".join([*(["noman", "nodoc", "noinfo"] if config.with_docs else [])])
 
     @classmethod
     def cmd(cls, context: Context) -> list[PathString]:
         return [
             cls.executable(context.config),
-            "--buildpkg=y",
-            "--usepkg=y",
-            # "--getbinpkg=y",
-            "--binpkg-respect-use=y",
-            "--jobs",
-            "--usepkg-exclude", "x11-drivers/nvidia-drivers",
-            "--load-average",
-            "--with-bdeps=n",
-            "--with-bdeps-auto=y",
-            "--changed-deps=y",
-            "--changed-deps-report=y",
-            "--changed-slot",
-            "--changed-use",
-            "--newuse",
-            "--noreplace",
-            "--update",
-            "--verbose-conflicts",
             *(["--verbose", "--quiet-fail=n"] if ARG_DEBUG.get() else ["--quiet-build", "--quiet"]),
             f"--root={cls.installroot}",
         ]
@@ -183,7 +164,7 @@ class Emerge(PackageManager):
             network=True,
             devices=True,
             tools=context.config.tools(),
-            relaxed=True,
+            relaxed=False,
             options=[
                 *context.rootoptions(cls.installroot),
                 *cls.mounts(context),
@@ -261,6 +242,7 @@ class Emerge(PackageManager):
         packages: Sequence[str],
         *,
         apivfs: bool = True,
+        allow_downgrade: bool = False,
     ) -> None:
         cls.invoke(context, cls.installroot, (), packages, apivfs=apivfs)
 

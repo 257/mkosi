@@ -1180,7 +1180,7 @@ def install_base_trees(context: Context) -> None:
 
     with complete_step("Copying in base trees…"):
         for path in context.config.base_trees:
-            install_tree(context.config, path, context.root)
+            install_tree(context.config, path, context.root, preserve=False)
 
 
 def install_skeleton_trees(context: Context) -> None:
@@ -3252,6 +3252,7 @@ def reuse_cache(context: Context) -> bool:
         copy_tree(
             final,
             context.root,
+            preserve=False,
             use_subvolumes=context.config.use_subvolumes,
             sandbox=context.sandbox,
         )
