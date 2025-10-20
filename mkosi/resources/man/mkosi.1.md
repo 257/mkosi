@@ -516,21 +516,21 @@ boolean argument: either `1`, `yes`, or `true` to enable, or `0`, `no`,
     The default mirrors for each distribution are as follows (unless
     specified, the same mirror is used for all architectures):
 
-    |                | x86-64                            | aarch64                        |
-    |----------------|-----------------------------------|--------------------------------|
-    | `debian`       | http://deb.debian.org             |                                |
-    | `arch`         | https://geo.mirror.pkgbuild.com   | http://mirror.archlinuxarm.org |
-    | `opensuse`     | http://download.opensuse.org      |                                |
-    | `kali`         | http://http.kali.org/kali         |                                |
-    | `ubuntu`       | http://archive.ubuntu.com         | http://ports.ubuntu.com        |
-    | `centos`       | https://mirrors.centos.org        |                                |
-    | `rocky`        | https://mirrors.rockylinux.org    |                                |
-    | `alma`         | https://mirrors.almalinux.org     |                                |
-    | `fedora`       | https://mirrors.fedoraproject.org |                                |
-    | `rhel-ubi`     | https://cdn-ubi.redhat.com        |                                |
-    | `mageia`       | https://www.mageia.org            |                                |
-    | `openmandriva` | http://mirrors.openmandriva.org   |                                |
-    | `azure`        | https://packages.microsoft.com/   |                                |
+    |                | x86-64                             | aarch64                        |
+    |----------------|------------------------------------|--------------------------------|
+    | `debian`       | http://deb.debian.org              |                                |
+    | `arch`         | https://fastly.mirror.pkgbuild.com | http://mirror.archlinuxarm.org |
+    | `opensuse`     | http://download.opensuse.org       |                                |
+    | `kali`         | http://http.kali.org/kali          |                                |
+    | `ubuntu`       | http://archive.ubuntu.com          | http://ports.ubuntu.com        |
+    | `centos`       | https://mirrors.centos.org         |                                |
+    | `rocky`        | https://mirrors.rockylinux.org     |                                |
+    | `alma`         | https://mirrors.almalinux.org      |                                |
+    | `fedora`       | https://mirrors.fedoraproject.org  |                                |
+    | `rhel-ubi`     | https://cdn-ubi.redhat.com         |                                |
+    | `mageia`       | https://www.mageia.org             |                                |
+    | `openmandriva` | http://mirrors.openmandriva.org    |                                |
+    | `azure`        | https://packages.microsoft.com/    |                                |
 
 `Snapshot=`
 :   Download packages from the given snapshot instead of downloading the latest
@@ -736,8 +736,7 @@ boolean argument: either `1`, `yes`, or `true` to enable, or `0`, `no`,
     initially empty. Thus files that are not modified compared to the base trees
     will not be present in the final output.
 
-    This option may be used to create [systemd *system extensions* or
-    *portable services*](https://uapi-group.org/specifications/specs/extension_image).
+    This option may be used to create [systemd *system extensions*](https://uapi-group.org/specifications/specs/extension_image).
 
 `Seed=`, `--seed=`
 :   Takes a UUID as argument or the special value `random`.
