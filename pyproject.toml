@@ -23,6 +23,7 @@ mkosi = "mkosi.__main__:main"
 mkosi-initrd = "mkosi.initrd:main"
 mkosi-sandbox = "mkosi.sandbox:main"
 mkosi-addon = "mkosi.addon:main"
+mkosi-getstage3 = "mkosi.getstage3:main"
 
 [tool.setuptools]
 packages = [
