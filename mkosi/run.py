@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, NoReturn, Optional, Pr
 
 import mkosi
 import mkosi.sandbox
-from mkosi.log import ARG_DEBUG, ARG_DEBUG_SANDBOX, ARG_DEBUG_SHELL, die
+from mkosi.log import ARG_DEBUG, ARG_DEBUG_SANDBOX, ARG_DEBUG_SHELL, die, log_notice
 from mkosi.sandbox import acquire_privileges, joinpath, umask
 from mkosi.util import _FILE, PathString, flatten, one_zero, resource_path, unique
 
@@ -677,7 +677,7 @@ def sandbox_cmd(
                     "--overlay", Path("/") / d,
                 ]  # fmt: skip
             else:
-                cmdline += ["--ro-bind", tools / d, Path("/") / d]
+                cmdline += ["--bind", tools / d, Path("/") / d]
 
         for d in (
             "bin",
@@ -738,7 +738,7 @@ def sandbox_cmd(
             # from the tools tree as well if they exists since those are directly related to /usr.
             for p in (Path("etc/alternatives"), Path("etc/ld.so.cache")):
                 if (tools / p).exists():
-                    cmdline += ["--ro-bind", tools / p, Path("/") / p]
+                    cmdline += ["--bind", tools / p, Path("/") / p]
 
             if network:
                 cmdline += finalize_resolverdir_mounts()
