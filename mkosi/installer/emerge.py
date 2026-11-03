@@ -191,6 +191,9 @@ class Emerge(PackageManager):
         if context.config.output_format == OutputFormat.confext:
             return
 
+        for cmd in [["emaint", "sync", "-a"], ['emaint', 'binhost', '-f']]:
+            run(cmd, sandbox=cls.sandbox(context, apivfs=True), env=context.config.environment)
+
         # TODO: document 2+1 magic/undocumented things here:
         # 1. mkosi.sandbox/installroot
         # 2. mkosi.sandbox/stage3
